@@ -15,6 +15,26 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
+// Helper function to parse amount from string
+const parseAmount = (value: string | null): number => {
+  if (!value) return 0;
+  const cleaned = value.replace(/[^0-9.-]/g, '');
+  const parsed = parseFloat(cleaned);
+  return isNaN(parsed) ? 0 : parsed;
+};
+
+// Helper function to format currency
+const formatCurrency = (amount: number): string => {
+  if (amount >= 1_000_000_000) {
+    return `${(amount / 1_000_000_000).toFixed(1)}B`;
+  } else if (amount >= 1_000_000) {
+    return `${(amount / 1_000_000).toFixed(1)}M`;
+  } else if (amount >= 1_000) {
+    return `${(amount / 1_000).toFixed(1)}K`;
+  }
+  return amount.toLocaleString('vi-VN', { maximumFractionDigits: 0 });
+};
+
 const Index = () => {
   const { invoices, loading } = useInvoices();
 
@@ -22,8 +42,7 @@ const Index = () => {
     const totalInvoices = invoices.length;
     
     const totalAmount = invoices.reduce((sum, inv) => {
-      const amount = parseFloat(inv.total_amount?.replace(/[^0-9.-]/g, '') || '0');
-      return sum + (isNaN(amount) ? 0 : amount);
+      return sum + parseAmount(inv.total_amount);
     }, 0);
 
     const pendingInvoices = invoices.filter((inv) => inv.status === 'pending').length;
@@ -48,7 +67,7 @@ const Index = () => {
       }
       
       const existing = acc.find((item) => item.month === month);
-      const amount = parseFloat(inv.total_amount?.replace(/[^0-9.-]/g, '') || '0') || 0;
+      const amount = parseAmount(inv.total_amount);
       
       if (existing) {
         existing.amount += amount;
@@ -63,7 +82,7 @@ const Index = () => {
     const vendorData = invoices.reduce((acc: any[], inv) => {
       const vendor = inv.vendor_name || 'Unknown';
       const existing = acc.find((item) => item.vendor === vendor);
-      const amount = parseFloat(inv.total_amount?.replace(/[^0-9.-]/g, '') || '0') || 0;
+      const amount = parseAmount(inv.total_amount);
       
       if (existing) {
         existing.amount += amount;
@@ -169,7 +188,7 @@ const Index = () => {
           />
           <StatCard
             title="Tổng giá trị"
-            value={`${(stats.totalAmount / 1000000).toFixed(1)}M`}
+            value={formatCurrency(stats.totalAmount)}
             change="Tổng số tiền"
             changeType="positive"
             icon={DollarSign}
