@@ -8,16 +8,30 @@ import {
   BarChart3,
   Receipt,
   LogOut,
+  Users,
+  Home,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
-const navItems = [
+// Admin navigation items
+const adminNavItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
   { icon: FileText, label: 'Hóa đơn', path: '/invoices' },
   { icon: Upload, label: 'Tải lên', path: '/upload' },
   { icon: BarChart3, label: 'Thống kê', path: '/analytics' },
+  { icon: Users, label: 'Người dùng', path: '/users' },
+  { icon: Settings, label: 'Cài đặt', path: '/settings' },
+];
+
+// User navigation items
+const userNavItems = [
+  { icon: Home, label: 'Trang chủ', path: '/' },
+  { icon: FileText, label: 'Hóa đơn', path: '/invoices' },
+  { icon: Upload, label: 'Tải lên', path: '/upload' },
   { icon: Settings, label: 'Cài đặt', path: '/settings' },
 ];
 
@@ -25,11 +39,14 @@ export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/auth');
   };
+
+  const navItems = isAdmin ? adminNavItems : userNavItems;
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-border bg-sidebar">
@@ -39,11 +56,22 @@ export function Sidebar() {
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
             <Receipt className="h-5 w-5 text-primary-foreground" />
           </div>
-          <div>
-            <h1 className="text-lg font-semibold text-foreground">InvoiceAI</h1>
-            <p className="text-xs text-muted-foreground">Smart Extraction</p>
+          <div className="flex items-center gap-2">
+            <div>
+              <h1 className="text-lg font-semibold text-foreground">InvoiceAI</h1>
+              <p className="text-xs text-muted-foreground">Smart Extraction</p>
+            </div>
           </div>
         </div>
+
+        {/* Role Badge */}
+        {!roleLoading && (
+          <div className="px-4 py-2">
+            <Badge variant={isAdmin ? 'default' : 'secondary'} className="w-full justify-center">
+              {isAdmin ? 'Quản trị viên' : 'Người dùng'}
+            </Badge>
+          </div>
+        )}
 
         {/* Navigation */}
         <nav className="flex-1 space-y-1 px-3 py-4">
