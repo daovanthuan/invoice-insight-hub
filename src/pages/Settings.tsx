@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
@@ -6,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -14,28 +16,134 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
   User,
   Bell,
-  Shield,
-  Palette,
   Globe,
-  Cpu,
   Save,
+  LogOut,
+  Lock,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
+import { useUserSettings } from '@/hooks/useUserSettings';
+import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 
 export default function SettingsPage() {
-  const handleSave = () => {
-    toast.success('Settings saved successfully!');
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { settings, loading, saving, updateSettings } = useUserSettings();
+  
+  const [dateFormat, setDateFormat] = useState<string>('');
+  const [defaultCurrency, setDefaultCurrency] = useState<string>('');
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [errorAlerts, setErrorAlerts] = useState(true);
+  const [weeklyReports, setWeeklyReports] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  // Password change states
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  // Initialize form when settings load
+  if (settings && !hasChanges) {
+    if (dateFormat === '') setDateFormat(settings.date_format);
+    if (defaultCurrency === '') setDefaultCurrency(settings.default_currency);
+    if (emailNotifications !== settings.email_notifications) setEmailNotifications(settings.email_notifications);
+    if (errorAlerts !== settings.error_alerts) setErrorAlerts(settings.error_alerts);
+    if (weeklyReports !== settings.weekly_reports) setWeeklyReports(settings.weekly_reports);
+  }
+
+  const handleChange = () => {
+    setHasChanges(true);
   };
+
+  const handleSave = async () => {
+    await updateSettings({
+      date_format: dateFormat,
+      default_currency: defaultCurrency,
+      email_notifications: emailNotifications,
+      error_alerts: errorAlerts,
+      weekly_reports: weeklyReports,
+    });
+    setHasChanges(false);
+  };
+
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      toast.error('Mật khẩu mới không khớp');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast.error('Mật khẩu phải có ít nhất 6 ký tự');
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) throw error;
+
+      toast.success('Đã đổi mật khẩu thành công');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error: any) {
+      console.error('Error changing password:', error);
+      toast.error(error.message || 'Không thể đổi mật khẩu');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      navigate('/auth');
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast.error('Không thể đăng xuất');
+    }
+  };
+
+  if (loading) {
+    return (
+      <MainLayout>
+        <Header title="Cài đặt" subtitle="Tùy chỉnh cài đặt ứng dụng" />
+        <div className="p-6 max-w-4xl space-y-8">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-48" />
+          ))}
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
-      <Header title="Settings" subtitle="Configure your invoice extraction preferences" />
+      <Header title="Cài đặt" subtitle="Tùy chỉnh cài đặt ứng dụng" />
 
       <div className="p-6 max-w-4xl">
         <div className="space-y-8">
-          {/* Profile Section */}
+          {/* Account Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -46,32 +154,99 @@ export default function SettingsPage() {
                 <User className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-foreground">Profile</h3>
-                <p className="text-sm text-muted-foreground">Manage your account information</p>
+                <h3 className="text-lg font-semibold text-foreground">Tài khoản</h3>
+                <p className="text-sm text-muted-foreground">Thông tin tài khoản của bạn</p>
               </div>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Full Name</Label>
-                <Input id="name" defaultValue="John Doe" className="bg-muted/50" />
+                <Label>Email</Label>
+                <Input 
+                  value={user?.email || ''} 
+                  disabled 
+                  className="bg-muted/50" 
+                />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" defaultValue="john@company.com" className="bg-muted/50" />
+
+              <Separator />
+
+              {/* Change Password */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Lock className="h-4 w-4 text-muted-foreground" />
+                  <Label className="text-base font-medium">Đổi mật khẩu</Label>
+                </div>
+                
+                <div className="grid gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword">Mật khẩu mới</Label>
+                    <Input
+                      id="newPassword"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="bg-muted/50"
+                      placeholder="••••••"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Xác nhận mật khẩu</Label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="bg-muted/50"
+                      placeholder="••••••"
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      variant="outline"
+                      onClick={handleChangePassword}
+                      disabled={changingPassword || !newPassword || !confirmPassword}
+                      className="w-full"
+                    >
+                      {changingPassword ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        'Đổi mật khẩu'
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="company">Company</Label>
-                <Input id="company" defaultValue="Global Corp Ltd." className="bg-muted/50" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
-                <Input id="role" defaultValue="Finance Manager" className="bg-muted/50" />
-              </div>
+
+              <Separator />
+
+              {/* Logout */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" className="gap-2">
+                    <LogOut className="h-4 w-4" />
+                    Đăng xuất
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Xác nhận đăng xuất</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Hủy</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleLogout}>
+                      Đăng xuất
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </motion.div>
 
-          {/* AI Model Settings */}
+          {/* Notifications */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -80,124 +255,61 @@ export default function SettingsPage() {
           >
             <div className="flex items-center gap-3 mb-6">
               <div className="rounded-lg bg-primary/10 p-2">
-                <Cpu className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">AI Extraction</h3>
-                <p className="text-sm text-muted-foreground">Configure AI model preferences</p>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Primary AI Model</Label>
-                  <Select defaultValue="gemini">
-                    <SelectTrigger className="bg-muted/50">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="gemini">Gemini 2.5 Flash</SelectItem>
-                      <SelectItem value="gpt4">GPT-4 Vision</SelectItem>
-                      <SelectItem value="claude">Claude 3.5 Sonnet</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>OCR Engine</Label>
-                  <Select defaultValue="olmocr">
-                    <SelectTrigger className="bg-muted/50">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="olmocr">OlmOCR 2-7B</SelectItem>
-                      <SelectItem value="tesseract">Tesseract OCR</SelectItem>
-                      <SelectItem value="google">Google Vision OCR</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-foreground">Ensemble Pipeline</p>
-                  <p className="text-sm text-muted-foreground">
-                    Use 3-way verification for maximum accuracy
-                  </p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-foreground">Auto Table Detection</p>
-                  <p className="text-sm text-muted-foreground">
-                    Automatically detect and crop tables from documents
-                  </p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-foreground">Smart Text Normalization</p>
-                  <p className="text-sm text-muted-foreground">
-                    Fix OCR spelling errors in common business terms
-                  </p>
-                </div>
-                <Switch defaultChecked />
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Notifications */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="glass rounded-xl p-6"
-          >
-            <div className="flex items-center gap-3 mb-6">
-              <div className="rounded-lg bg-primary/10 p-2">
                 <Bell className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-foreground">Notifications</h3>
-                <p className="text-sm text-muted-foreground">Configure how you receive updates</p>
+                <h3 className="text-lg font-semibold text-foreground">Thông báo</h3>
+                <p className="text-sm text-muted-foreground">Cấu hình nhận thông báo</p>
               </div>
             </div>
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-foreground">Email Notifications</p>
+                  <p className="font-medium text-foreground">Thông báo email</p>
                   <p className="text-sm text-muted-foreground">
-                    Receive email when extraction completes
+                    Nhận email khi hoàn thành trích xuất
                   </p>
                 </div>
-                <Switch defaultChecked />
+                <Switch
+                  checked={emailNotifications}
+                  onCheckedChange={(checked) => {
+                    setEmailNotifications(checked);
+                    handleChange();
+                  }}
+                />
               </div>
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-foreground">Error Alerts</p>
+                  <p className="font-medium text-foreground">Cảnh báo lỗi</p>
                   <p className="text-sm text-muted-foreground">
-                    Get notified when extraction fails
+                    Nhận thông báo khi có lỗi xảy ra
                   </p>
                 </div>
-                <Switch defaultChecked />
+                <Switch
+                  checked={errorAlerts}
+                  onCheckedChange={(checked) => {
+                    setErrorAlerts(checked);
+                    handleChange();
+                  }}
+                />
               </div>
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-foreground">Weekly Reports</p>
+                  <p className="font-medium text-foreground">Báo cáo hàng tuần</p>
                   <p className="text-sm text-muted-foreground">
-                    Receive weekly summary of processed invoices
+                    Nhận tổng hợp hóa đơn đã xử lý hàng tuần
                   </p>
                 </div>
-                <Switch />
+                <Switch
+                  checked={weeklyReports}
+                  onCheckedChange={(checked) => {
+                    setWeeklyReports(checked);
+                    handleChange();
+                  }}
+                />
               </div>
             </div>
           </motion.div>
@@ -206,7 +318,7 @@ export default function SettingsPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
+            transition={{ delay: 0.2 }}
             className="glass rounded-xl p-6"
           >
             <div className="flex items-center gap-3 mb-6">
@@ -214,15 +326,21 @@ export default function SettingsPage() {
                 <Globe className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-foreground">Localization</h3>
-                <p className="text-sm text-muted-foreground">Date and currency preferences</p>
+                <h3 className="text-lg font-semibold text-foreground">Khu vực</h3>
+                <p className="text-sm text-muted-foreground">Cài đặt ngày tháng và tiền tệ</p>
               </div>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Date Format</Label>
-                <Select defaultValue="dmy">
+                <Label>Định dạng ngày</Label>
+                <Select
+                  value={dateFormat}
+                  onValueChange={(value) => {
+                    setDateFormat(value);
+                    handleChange();
+                  }}
+                >
                   <SelectTrigger className="bg-muted/50">
                     <SelectValue />
                   </SelectTrigger>
@@ -234,16 +352,22 @@ export default function SettingsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Default Currency</Label>
-                <Select defaultValue="usd">
+                <Label>Tiền tệ mặc định</Label>
+                <Select
+                  value={defaultCurrency}
+                  onValueChange={(value) => {
+                    setDefaultCurrency(value);
+                    handleChange();
+                  }}
+                >
                   <SelectTrigger className="bg-muted/50">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="usd">USD ($)</SelectItem>
-                    <SelectItem value="eur">EUR (€)</SelectItem>
-                    <SelectItem value="gbp">GBP (£)</SelectItem>
-                    <SelectItem value="vnd">VND (₫)</SelectItem>
+                    <SelectItem value="VND">VND (₫)</SelectItem>
+                    <SelectItem value="USD">USD ($)</SelectItem>
+                    <SelectItem value="EUR">EUR (€)</SelectItem>
+                    <SelectItem value="GBP">GBP (£)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -251,17 +375,22 @@ export default function SettingsPage() {
           </motion.div>
 
           {/* Save Button */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="flex justify-end"
-          >
-            <Button onClick={handleSave} className="gap-2">
-              <Save className="h-4 w-4" />
-              Save Changes
-            </Button>
-          </motion.div>
+          {hasChanges && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex justify-end"
+            >
+              <Button onClick={handleSave} disabled={saving} className="gap-2">
+                {saving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4" />
+                )}
+                Lưu thay đổi
+              </Button>
+            </motion.div>
+          )}
         </div>
       </div>
     </MainLayout>

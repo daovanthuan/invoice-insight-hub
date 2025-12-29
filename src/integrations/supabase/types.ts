@@ -166,6 +166,42 @@ export type Database = {
           },
         ]
       }
+      user_settings: {
+        Row: {
+          created_at: string
+          date_format: string
+          default_currency: string
+          email_notifications: boolean
+          error_alerts: boolean
+          id: string
+          updated_at: string
+          user_id: string
+          weekly_reports: boolean
+        }
+        Insert: {
+          created_at?: string
+          date_format?: string
+          default_currency?: string
+          email_notifications?: boolean
+          error_alerts?: boolean
+          id?: string
+          updated_at?: string
+          user_id: string
+          weekly_reports?: boolean
+        }
+        Update: {
+          created_at?: string
+          date_format?: string
+          default_currency?: string
+          email_notifications?: boolean
+          error_alerts?: boolean
+          id?: string
+          updated_at?: string
+          user_id?: string
+          weekly_reports?: boolean
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
