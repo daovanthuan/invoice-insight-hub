@@ -132,16 +132,24 @@ export default function UploadPage() {
     }
   };
 
+  const validFileTypes = [
+    'image/png', 
+    'image/jpeg', 
+    'image/jpg', 
+    'image/webp',
+    'application/pdf'
+  ];
+
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
 
     const droppedFiles = Array.from(e.dataTransfer.files).filter((file) =>
-      ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'].includes(file.type)
+      validFileTypes.includes(file.type)
     );
 
     if (droppedFiles.length === 0) {
-      toast.error('Vui lòng upload file ảnh (PNG, JPG, WEBP)');
+      toast.error('Vui lòng upload file ảnh (PNG, JPG, WEBP) hoặc PDF');
       return;
     }
 
@@ -162,11 +170,11 @@ export default function UploadPage() {
 
   const handleFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []).filter((file) =>
-      ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'].includes(file.type)
+      validFileTypes.includes(file.type)
     );
 
     if (selectedFiles.length === 0) {
-      toast.error('Vui lòng upload file ảnh (PNG, JPG, WEBP)');
+      toast.error('Vui lòng upload file ảnh (PNG, JPG, WEBP) hoặc PDF');
       return;
     }
 
@@ -221,7 +229,7 @@ export default function UploadPage() {
 
   return (
     <MainLayout>
-      <Header title="Tải Lên Hóa Đơn" subtitle="Upload ảnh hóa đơn để AI trích xuất dữ liệu" />
+      <Header title="Tải Lên Hóa Đơn" subtitle="Upload ảnh hoặc PDF hóa đơn để AI trích xuất dữ liệu" />
 
       <div className="p-6">
         {/* Upload Zone */}
@@ -253,7 +261,7 @@ export default function UploadPage() {
                   isDragging ? 'bg-primary/20' : 'bg-muted'
                 )}
               >
-                <ImageIcon
+                <UploadIcon
                   className={cn(
                     'h-10 w-10 transition-colors',
                     isDragging ? 'text-primary' : 'text-muted-foreground'
@@ -261,10 +269,10 @@ export default function UploadPage() {
                 />
               </div>
               <p className="mb-2 text-lg font-semibold text-foreground">
-                {isDragging ? 'Thả file vào đây' : 'Kéo & thả ảnh hóa đơn'}
+                {isDragging ? 'Thả file vào đây' : 'Kéo & thả hóa đơn'}
               </p>
               <p className="text-sm text-muted-foreground mb-4">
-                hoặc click để chọn file (PNG, JPG, WEBP)
+                hoặc click để chọn file (PNG, JPG, WEBP, PDF)
               </p>
               <Button variant="outline" className="pointer-events-none">
                 Chọn File
@@ -274,7 +282,7 @@ export default function UploadPage() {
               id="file-upload"
               type="file"
               className="hidden"
-              accept="image/png,image/jpeg,image/jpg,image/webp"
+              accept="image/png,image/jpeg,image/jpg,image/webp,application/pdf"
               multiple
               onChange={handleFileInput}
               disabled={isExtracting}

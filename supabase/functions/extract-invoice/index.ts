@@ -8,7 +8,7 @@ const corsHeaders = {
 const SYSTEM_PROMPT = `You are a highly reliable invoice extraction AI. Your highest priority is accuracy.
 
 RULES FOR NUMERIC FIELDS:
-1. **Verbatim Extraction**: Extract numbers EXACTLY as seen in the image (e.g., if "1,200.00" or "1.200,00", output exactly the same string).
+1. **Verbatim Extraction**: Extract numbers EXACTLY as seen in the document (e.g., if "1,200.00" or "1.200,00", output exactly the same string).
 2. **Precision**: Preserve all dots (.), commas (,), spaces, and separators exactly as printed.
 3. **No Normalization**: Never convert formats (e.g., do not convert "1.200,00" to "1200.00").
 
@@ -70,10 +70,13 @@ serve(async (req) => {
   }
 
   try {
-    const { imageBase64, mimeType } = await req.json();
+    const { fileBase64, mimeType, isPdf } = await req.json();
     
-    if (!imageBase64) {
-      throw new Error("No image data provided");
+    // Support both old and new parameter names for backward compatibility
+    const base64Data = fileBase64 || (await req.json()).imageBase64;
+    
+    if (!base64Data && !fileBase64) {
+      throw new Error("No file data provided");
     }
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
@@ -81,7 +84,42 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Processing invoice extraction with Gemini 2.5 Flash...");
+    const fileType = isPdf ? 'PDF' : 'Image';
+    console.log(`Processing invoice extraction (${fileType}) with Gemini 2.5 Flash...`);
+
+    // Build the content based on file type
+    let userContent: any[];
+    
+    if (isPdf) {
+      // For PDFs, use the inline_data format with application/pdf
+      userContent = [
+        {
+          type: "file",
+          file: {
+            filename: "invoice.pdf",
+            file_data: `data:application/pdf;base64,${base64Data || fileBase64}`
+          }
+        },
+        {
+          type: "text",
+          text: "Extract all invoice data from this PDF document and return as JSON."
+        }
+      ];
+    } else {
+      // For images, use image_url format
+      userContent = [
+        {
+          type: "image_url",
+          image_url: {
+            url: `data:${mimeType || 'image/png'};base64,${base64Data || fileBase64}`
+          }
+        },
+        {
+          type: "text",
+          text: "Extract all invoice data from this image and return as JSON."
+        }
+      ];
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -98,18 +136,7 @@ serve(async (req) => {
           },
           { 
             role: "user", 
-            content: [
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:${mimeType || 'image/png'};base64,${imageBase64}`
-                }
-              },
-              {
-                type: "text",
-                text: "Extract all invoice data from this image and return as JSON."
-              }
-            ]
+            content: userContent
           }
         ],
       }),
