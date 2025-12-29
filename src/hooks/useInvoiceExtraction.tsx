@@ -63,10 +63,13 @@ export const useInvoiceExtraction = () => {
     setProgress(10);
 
     try {
-      // Validate file type
-      const validTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
-      if (!validTypes.includes(file.type)) {
-        toast.error("Chỉ hỗ trợ file ảnh (PNG, JPG, WEBP)");
+      // Validate file type - support images and PDFs
+      const validImageTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+      const validPdfTypes = ["application/pdf"];
+      const allValidTypes = [...validImageTypes, ...validPdfTypes];
+      
+      if (!allValidTypes.includes(file.type)) {
+        toast.error("Chỉ hỗ trợ file ảnh (PNG, JPG, WEBP) hoặc PDF");
         return null;
       }
 
@@ -77,11 +80,15 @@ export const useInvoiceExtraction = () => {
       
       setProgress(50);
 
+      // Determine if it's a PDF or image
+      const isPdf = validPdfTypes.includes(file.type);
+
       // Call edge function
       const { data, error } = await supabase.functions.invoke("extract-invoice", {
         body: {
-          imageBase64: base64,
+          fileBase64: base64,
           mimeType: file.type,
+          isPdf,
         },
       });
 
