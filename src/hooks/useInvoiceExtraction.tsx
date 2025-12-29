@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { renderPdfFirstPageToPngBase64 } from "@/lib/pdf";
 
 interface ExtractedData {
   core: {
@@ -65,30 +66,35 @@ export const useInvoiceExtraction = () => {
     try {
       // Validate file type - support images and PDFs
       const validImageTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
-      const validPdfTypes = ["application/pdf"];
-      const allValidTypes = [...validImageTypes, ...validPdfTypes];
-      
-      if (!allValidTypes.includes(file.type)) {
+      const isPdf = file.type === "application/pdf";
+
+      if (!isPdf && !validImageTypes.includes(file.type)) {
         toast.error("Chỉ hỗ trợ file ảnh (PNG, JPG, WEBP) hoặc PDF");
         return null;
       }
 
-      setProgress(30);
+      setProgress(25);
 
-      // Convert file to base64
-      const base64 = await fileToBase64(file);
-      
-      setProgress(50);
+      // Convert to base64 image
+      let imageBase64: string;
+      let mimeType: string;
 
-      // Determine if it's a PDF or image
-      const isPdf = validPdfTypes.includes(file.type);
+      if (isPdf) {
+        // Convert FIRST PAGE of PDF to PNG for extraction
+        imageBase64 = await renderPdfFirstPageToPngBase64(file);
+        mimeType = "image/png";
+      } else {
+        imageBase64 = await fileToBase64(file);
+        mimeType = file.type;
+      }
+
+      setProgress(55);
 
       // Call edge function
       const { data, error } = await supabase.functions.invoke("extract-invoice", {
         body: {
-          fileBase64: base64,
-          mimeType: file.type,
-          isPdf,
+          imageBase64,
+          mimeType,
         },
       });
 
@@ -100,14 +106,14 @@ export const useInvoiceExtraction = () => {
         return null;
       }
 
-      if (!data.success) {
-        toast.error(data.error || "Không thể trích xuất dữ liệu từ hóa đơn");
+      if (!data?.success) {
+        toast.error(data?.error || "Không thể trích xuất dữ liệu từ hóa đơn");
         return null;
       }
 
       setProgress(100);
       toast.success("Trích xuất hóa đơn thành công!");
-      
+
       return data.data as ExtractedData;
     } catch (error) {
       console.error("Extraction error:", error);
