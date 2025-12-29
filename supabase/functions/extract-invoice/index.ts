@@ -119,23 +119,41 @@ serve(async (req) => {
       });
     }
 
-    if (mimeType === "application/pdf") {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "PDF must be converted to an image before extraction.",
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
+
+    // Build user content based on file type
+    const isPdf = mimeType === "application/pdf";
+    const userContent = isPdf
+      ? [
+          {
+            type: "file",
+            file: {
+              filename: "invoice.pdf",
+              file_data: `data:application/pdf;base64,${imageBase64}`,
+            },
+          },
+          {
+            type: "text",
+            text: "Extract all invoice data and return JSON only.",
+          },
+        ]
+      : [
+          {
+            type: "image_url",
+            image_url: {
+              url: `data:${mimeType};base64,${imageBase64}`,
+            },
+          },
+          {
+            type: "text",
+            text: "Extract all invoice data and return JSON only.",
+          },
+        ];
+
+    console.log("Sending request to AI gateway, isPdf:", isPdf, "mimeType:", mimeType);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -149,18 +167,7 @@ serve(async (req) => {
           { role: "system", content: SYSTEM_PROMPT },
           {
             role: "user",
-            content: [
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:${mimeType};base64,${imageBase64}`,
-                },
-              },
-              {
-                type: "text",
-                text: "Extract all invoice data and return JSON only.",
-              },
-            ],
+            content: userContent,
           },
         ],
       }),

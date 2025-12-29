@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { renderPdfFirstPageToPngBase64 } from "@/lib/pdf";
 
 interface ExtractedData {
   core: {
@@ -75,25 +74,16 @@ export const useInvoiceExtraction = () => {
 
       setProgress(25);
 
-      // Convert to base64 image
-      let imageBase64: string;
-      let mimeType: string;
-
-      if (isPdf) {
-        // Convert FIRST PAGE of PDF to PNG for extraction
-        imageBase64 = await renderPdfFirstPageToPngBase64(file);
-        mimeType = "image/png";
-      } else {
-        imageBase64 = await fileToBase64(file);
-        mimeType = file.type;
-      }
+      // Convert file to base64
+      const fileBase64 = await fileToBase64(file);
+      const mimeType = file.type;
 
       setProgress(55);
 
-      // Call edge function
+      // Call edge function - send file directly, let AI handle PDF
       const { data, error } = await supabase.functions.invoke("extract-invoice", {
         body: {
-          imageBase64,
+          imageBase64: fileBase64,
           mimeType,
         },
       });
