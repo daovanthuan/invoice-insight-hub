@@ -127,7 +127,7 @@ const Index = () => {
       line_items: [],
     },
     extend: inv.extend || {},
-    createdAt: inv.created_at,
+    createdAt: new Date(inv.created_at),
   }));
 
   if (loading) {
