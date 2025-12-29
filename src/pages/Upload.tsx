@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
@@ -12,8 +13,11 @@ import {
   CheckCircle2,
   Loader2,
   AlertCircle,
+  ImageIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useInvoiceExtraction } from '@/hooks/useInvoiceExtraction';
+import { useInvoices } from '@/hooks/useInvoices';
 
 interface UploadedFile {
   id: string;
@@ -24,8 +28,11 @@ interface UploadedFile {
 }
 
 export default function UploadPage() {
+  const navigate = useNavigate();
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const { extractInvoice, isExtracting } = useInvoiceExtraction();
+  const { createInvoice } = useInvoices();
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -37,60 +44,104 @@ export default function UploadPage() {
     setIsDragging(false);
   }, []);
 
-  const simulateUpload = (fileId: string) => {
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.random() * 20;
-      if (progress >= 100) {
-        progress = 100;
-        clearInterval(interval);
-        
-        // Simulate processing
+  const processFile = async (uploadedFile: UploadedFile) => {
+    // Update status to processing
+    setFiles((prev) =>
+      prev.map((f) =>
+        f.id === uploadedFile.id ? { ...f, status: 'processing', progress: 50 } : f
+      )
+    );
+
+    try {
+      // Extract invoice data using AI
+      const extractedData = await extractInvoice(uploadedFile.file);
+
+      if (!extractedData) {
         setFiles((prev) =>
           prev.map((f) =>
-            f.id === fileId ? { ...f, status: 'processing', progress: 100 } : f
+            f.id === uploadedFile.id
+              ? { ...f, status: 'error', error: 'Không thể trích xuất dữ liệu' }
+              : f
           )
         );
+        return;
+      }
 
-        // Simulate completion after processing
-        setTimeout(() => {
-          const success = Math.random() > 0.2; // 80% success rate
-          setFiles((prev) =>
-            prev.map((f) =>
-              f.id === fileId
-                ? {
-                    ...f,
-                    status: success ? 'completed' : 'error',
-                    error: success ? undefined : 'OCR extraction failed',
-                  }
-                : f
-            )
-          );
-          
-          if (success) {
-            toast.success('Invoice extracted successfully!');
-          } else {
-            toast.error('Failed to extract invoice data');
-          }
-        }, 2000);
+      // Save to database
+      const core = extractedData.core;
+      const invoice = await createInvoice(
+        {
+          vendor_name: core.vendor_name || null,
+          vendor_tax_id: core.vendor_tax_id || null,
+          vendor_address: core.vendor_address || null,
+          vendor_phone: core.vendor_phone || null,
+          buyer_name: core.buyer_name || null,
+          buyer_tax_id: core.buyer_tax_id || null,
+          buyer_address: core.buyer_address || null,
+          invoice_id: core.invoice_id || null,
+          invoice_serial: core.invoice_serial || null,
+          invoice_date: core.invoice_date || null,
+          payment_method: core.payment_method || null,
+          currency: core.currency || null,
+          subtotal: core.subtotal || null,
+          tax_rate: core.tax_rate || null,
+          tax_amount: core.tax_amount || null,
+          total_amount: core.total_amount || null,
+          amount_in_words: core.amount_in_words || null,
+          status: 'processed',
+          file_name: uploadedFile.file.name,
+          raw_json: extractedData,
+          extend: extractedData.extend || {},
+        },
+        core.line_items?.map((item) => ({
+          item_code: item.item_code || null,
+          description: item.description || null,
+          unit: item.unit || null,
+          quantity: item.quantity || null,
+          unit_price: item.unit_price || null,
+          amount: item.amount || null,
+        }))
+      );
+
+      if (invoice) {
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.id === uploadedFile.id
+              ? { ...f, status: 'completed', progress: 100 }
+              : f
+          )
+        );
       } else {
         setFiles((prev) =>
-          prev.map((f) => (f.id === fileId ? { ...f, progress } : f))
+          prev.map((f) =>
+            f.id === uploadedFile.id
+              ? { ...f, status: 'error', error: 'Không thể lưu hóa đơn' }
+              : f
+          )
         );
       }
-    }, 200);
+    } catch (error) {
+      console.error('Error processing file:', error);
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === uploadedFile.id
+            ? { ...f, status: 'error', error: 'Đã xảy ra lỗi' }
+            : f
+        )
+      );
+    }
   };
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
 
-    const droppedFiles = Array.from(e.dataTransfer.files).filter(
-      (file) => file.type === 'application/pdf'
+    const droppedFiles = Array.from(e.dataTransfer.files).filter((file) =>
+      ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'].includes(file.type)
     );
 
     if (droppedFiles.length === 0) {
-      toast.error('Please upload PDF files only');
+      toast.error('Vui lòng upload file ảnh (PNG, JPG, WEBP)');
       return;
     }
 
@@ -103,16 +154,19 @@ export default function UploadPage() {
 
     setFiles((prev) => [...prev, ...newFiles]);
 
-    newFiles.forEach((f) => simulateUpload(f.id));
+    // Process files sequentially
+    for (const uploadedFile of newFiles) {
+      await processFile(uploadedFile);
+    }
   }, []);
 
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(e.target.files || []).filter(
-      (file) => file.type === 'application/pdf'
+  const handleFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || []).filter((file) =>
+      ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'].includes(file.type)
     );
 
     if (selectedFiles.length === 0) {
-      toast.error('Please upload PDF files only');
+      toast.error('Vui lòng upload file ảnh (PNG, JPG, WEBP)');
       return;
     }
 
@@ -124,7 +178,14 @@ export default function UploadPage() {
     }));
 
     setFiles((prev) => [...prev, ...newFiles]);
-    newFiles.forEach((f) => simulateUpload(f.id));
+
+    // Process files sequentially
+    for (const uploadedFile of newFiles) {
+      await processFile(uploadedFile);
+    }
+
+    // Reset input
+    e.target.value = '';
   };
 
   const removeFile = (id: string) => {
@@ -146,19 +207,21 @@ export default function UploadPage() {
   const getStatusText = (status: UploadedFile['status']) => {
     switch (status) {
       case 'uploading':
-        return 'Uploading...';
+        return 'Đang tải lên...';
       case 'processing':
-        return 'Extracting data with AI...';
+        return 'Đang trích xuất dữ liệu với AI...';
       case 'completed':
-        return 'Extraction complete';
+        return 'Trích xuất hoàn tất';
       case 'error':
-        return 'Extraction failed';
+        return 'Trích xuất thất bại';
     }
   };
 
+  const completedCount = files.filter((f) => f.status === 'completed').length;
+
   return (
     <MainLayout>
-      <Header title="Upload Invoices" subtitle="Upload PDF invoices for AI extraction" />
+      <Header title="Tải Lên Hóa Đơn" subtitle="Upload ảnh hóa đơn để AI trích xuất dữ liệu" />
 
       <div className="p-6">
         {/* Upload Zone */}
@@ -176,39 +239,45 @@ export default function UploadPage() {
               'flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-xl cursor-pointer transition-all duration-300',
               isDragging
                 ? 'border-primary bg-primary/5 scale-[1.02]'
-                : 'border-border bg-muted/20 hover:bg-muted/40 hover:border-muted-foreground/50'
+                : 'border-border bg-muted/20 hover:bg-muted/40 hover:border-muted-foreground/50',
+              isExtracting && 'pointer-events-none opacity-70'
             )}
           >
             <motion.div
               animate={{ scale: isDragging ? 1.1 : 1 }}
               className="flex flex-col items-center justify-center py-6"
             >
-              <div className={cn(
-                'mb-4 rounded-full p-4 transition-colors',
-                isDragging ? 'bg-primary/20' : 'bg-muted'
-              )}>
-                <UploadIcon className={cn(
-                  'h-10 w-10 transition-colors',
-                  isDragging ? 'text-primary' : 'text-muted-foreground'
-                )} />
+              <div
+                className={cn(
+                  'mb-4 rounded-full p-4 transition-colors',
+                  isDragging ? 'bg-primary/20' : 'bg-muted'
+                )}
+              >
+                <ImageIcon
+                  className={cn(
+                    'h-10 w-10 transition-colors',
+                    isDragging ? 'text-primary' : 'text-muted-foreground'
+                  )}
+                />
               </div>
               <p className="mb-2 text-lg font-semibold text-foreground">
-                {isDragging ? 'Drop files here' : 'Drag & drop PDF invoices'}
+                {isDragging ? 'Thả file vào đây' : 'Kéo & thả ảnh hóa đơn'}
               </p>
               <p className="text-sm text-muted-foreground mb-4">
-                or click to browse files
+                hoặc click để chọn file (PNG, JPG, WEBP)
               </p>
               <Button variant="outline" className="pointer-events-none">
-                Select Files
+                Chọn File
               </Button>
             </motion.div>
             <input
               id="file-upload"
               type="file"
               className="hidden"
-              accept=".pdf"
+              accept="image/png,image/jpeg,image/jpg,image/webp"
               multiple
               onChange={handleFileInput}
+              disabled={isExtracting}
             />
           </label>
         </motion.div>
@@ -222,9 +291,16 @@ export default function UploadPage() {
               exit={{ opacity: 0, y: -20 }}
               className="glass rounded-xl p-6"
             >
-              <h3 className="mb-4 text-lg font-semibold text-foreground">
-                Uploaded Files ({files.length})
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-foreground">
+                  File đã tải ({files.length})
+                </h3>
+                {completedCount > 0 && (
+                  <Button onClick={() => navigate('/invoices')} size="sm">
+                    Xem hóa đơn đã trích xuất
+                  </Button>
+                )}
+              </div>
 
               <div className="space-y-3">
                 {files.map((file, index) => (
@@ -246,14 +322,19 @@ export default function UploadPage() {
                       </p>
                       <div className="flex items-center gap-2 mt-1">
                         {getStatusIcon(file.status)}
-                        <span className={cn(
-                          'text-sm',
-                          file.status === 'error' ? 'text-destructive' : 'text-muted-foreground'
-                        )}>
+                        <span
+                          className={cn(
+                            'text-sm',
+                            file.status === 'error'
+                              ? 'text-destructive'
+                              : 'text-muted-foreground'
+                          )}
+                        >
                           {file.error || getStatusText(file.status)}
                         </span>
                       </div>
-                      {(file.status === 'uploading' || file.status === 'processing') && (
+                      {(file.status === 'uploading' ||
+                        file.status === 'processing') && (
                         <Progress value={file.progress} className="mt-2 h-1" />
                       )}
                     </div>
@@ -267,6 +348,10 @@ export default function UploadPage() {
                       size="icon"
                       onClick={() => removeFile(file.id)}
                       className="text-muted-foreground hover:text-destructive"
+                      disabled={
+                        file.status === 'uploading' ||
+                        file.status === 'processing'
+                      }
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -286,16 +371,19 @@ export default function UploadPage() {
         >
           {[
             {
-              title: 'AI-Powered OCR',
-              description: 'Uses OlmOCR + Gemini 2.5 Flash for accurate text extraction from scanned documents',
+              title: 'AI Vision',
+              description:
+                'Sử dụng Gemini 2.5 Flash để trích xuất chính xác văn bản từ ảnh hóa đơn',
             },
             {
-              title: 'Multi-Page Support',
-              description: 'Handles multi-page PDFs with automatic table detection and data merging',
+              title: 'Lưu Trữ An Toàn',
+              description:
+                'Dữ liệu được lưu trữ bảo mật với mã hóa và phân quyền người dùng',
             },
             {
-              title: 'Smart Validation',
-              description: 'Ensemble pipeline with 3-way verification for 99% extraction accuracy',
+              title: 'Độ Chính Xác Cao',
+              description:
+                'Trích xuất số liệu và văn bản với độ chính xác trên 95%',
             },
           ].map((item, idx) => (
             <div key={idx} className="rounded-xl bg-muted/30 p-6">

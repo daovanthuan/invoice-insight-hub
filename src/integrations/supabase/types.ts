@@ -14,7 +14,158 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      invoices: {
+        Row: {
+          amount_in_words: string | null
+          buyer_account_no: string | null
+          buyer_address: string | null
+          buyer_name: string | null
+          buyer_tax_id: string | null
+          created_at: string
+          currency: string | null
+          exchange_rate: string | null
+          extend: Json | null
+          file_name: string | null
+          file_path: string | null
+          id: string
+          invoice_date: string | null
+          invoice_id: string | null
+          invoice_serial: string | null
+          lookup_code: string | null
+          lookup_url: string | null
+          payment_method: string | null
+          raw_json: Json | null
+          status: string | null
+          subtotal: string | null
+          tax_amount: string | null
+          tax_authority_code: string | null
+          tax_rate: string | null
+          total_amount: string | null
+          updated_at: string
+          user_id: string | null
+          vendor_account_no: string | null
+          vendor_address: string | null
+          vendor_fax: string | null
+          vendor_name: string | null
+          vendor_phone: string | null
+          vendor_tax_id: string | null
+        }
+        Insert: {
+          amount_in_words?: string | null
+          buyer_account_no?: string | null
+          buyer_address?: string | null
+          buyer_name?: string | null
+          buyer_tax_id?: string | null
+          created_at?: string
+          currency?: string | null
+          exchange_rate?: string | null
+          extend?: Json | null
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          invoice_date?: string | null
+          invoice_id?: string | null
+          invoice_serial?: string | null
+          lookup_code?: string | null
+          lookup_url?: string | null
+          payment_method?: string | null
+          raw_json?: Json | null
+          status?: string | null
+          subtotal?: string | null
+          tax_amount?: string | null
+          tax_authority_code?: string | null
+          tax_rate?: string | null
+          total_amount?: string | null
+          updated_at?: string
+          user_id?: string | null
+          vendor_account_no?: string | null
+          vendor_address?: string | null
+          vendor_fax?: string | null
+          vendor_name?: string | null
+          vendor_phone?: string | null
+          vendor_tax_id?: string | null
+        }
+        Update: {
+          amount_in_words?: string | null
+          buyer_account_no?: string | null
+          buyer_address?: string | null
+          buyer_name?: string | null
+          buyer_tax_id?: string | null
+          created_at?: string
+          currency?: string | null
+          exchange_rate?: string | null
+          extend?: Json | null
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          invoice_date?: string | null
+          invoice_id?: string | null
+          invoice_serial?: string | null
+          lookup_code?: string | null
+          lookup_url?: string | null
+          payment_method?: string | null
+          raw_json?: Json | null
+          status?: string | null
+          subtotal?: string | null
+          tax_amount?: string | null
+          tax_authority_code?: string | null
+          tax_rate?: string | null
+          total_amount?: string | null
+          updated_at?: string
+          user_id?: string | null
+          vendor_account_no?: string | null
+          vendor_address?: string | null
+          vendor_fax?: string | null
+          vendor_name?: string | null
+          vendor_phone?: string | null
+          vendor_tax_id?: string | null
+        }
+        Relationships: []
+      }
+      line_items: {
+        Row: {
+          amount: string | null
+          created_at: string
+          description: string | null
+          id: string
+          invoice_id: string
+          item_code: string | null
+          quantity: string | null
+          unit: string | null
+          unit_price: string | null
+        }
+        Insert: {
+          amount?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          invoice_id: string
+          item_code?: string | null
+          quantity?: string | null
+          unit?: string | null
+          unit_price?: string | null
+        }
+        Update: {
+          amount?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          invoice_id?: string
+          item_code?: string | null
+          quantity?: string | null
+          unit?: string | null
+          unit_price?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
