@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -7,19 +7,29 @@ import {
   Settings,
   BarChart3,
   Receipt,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-  { icon: FileText, label: 'Invoices', path: '/invoices' },
-  { icon: Upload, label: 'Upload', path: '/upload' },
-  { icon: BarChart3, label: 'Analytics', path: '/analytics' },
-  { icon: Settings, label: 'Settings', path: '/settings' },
+  { icon: FileText, label: 'Hóa đơn', path: '/invoices' },
+  { icon: Upload, label: 'Tải lên', path: '/upload' },
+  { icon: BarChart3, label: 'Thống kê', path: '/analytics' },
+  { icon: Settings, label: 'Cài đặt', path: '/settings' },
 ];
 
 export function Sidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-border bg-sidebar">
@@ -66,13 +76,21 @@ export function Sidebar() {
         </nav>
 
         {/* Footer */}
-        <div className="border-t border-border p-4">
+        <div className="border-t border-border p-4 space-y-3">
+          <Button
+            variant="ghost"
+            className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive"
+            onClick={handleSignOut}
+          >
+            <LogOut className="h-5 w-5" />
+            Đăng xuất
+          </Button>
           <div className="rounded-lg bg-muted/50 p-4">
             <p className="text-xs font-medium text-muted-foreground">
               Powered by
             </p>
             <p className="text-sm font-semibold text-foreground">
-              Gemini 2.5 Flash + OlmOCR
+              Gemini 2.5 Flash
             </p>
           </div>
         </div>
