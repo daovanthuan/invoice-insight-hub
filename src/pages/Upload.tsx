@@ -75,6 +75,17 @@ export default function UploadPage() {
 
       // Save to database
       const core = extractedData.core;
+      
+      // Calculate subtotal from line items (sum of all amounts)
+      const lineItems = core.line_items || [];
+      const calculatedSubtotal = lineItems.reduce((sum, item) => {
+        const amount = parseNumber(item.amount);
+        return sum + (amount || 0);
+      }, 0);
+      
+      // Use calculated subtotal if valid, otherwise fallback to AI-extracted value
+      const subtotalValue = calculatedSubtotal > 0 ? calculatedSubtotal : parseNumber(core.subtotal);
+      
       const invoice = await createInvoice(
         {
           vendor_name: core.vendor_name || null,
@@ -92,7 +103,7 @@ export default function UploadPage() {
           invoice_date: core.invoice_date || null,
           payment_method: core.payment_method || null,
           currency: core.currency || null,
-          subtotal: parseNumber(core.subtotal),
+          subtotal: subtotalValue,
           tax_rate: parseNumber(core.tax_rate),
           tax_amount: parseNumber(core.tax_amount),
           total_amount: parseNumber(core.total_amount),
@@ -100,11 +111,14 @@ export default function UploadPage() {
           tax_authority_code: core.tax_authority_code || null,
           lookup_code: core.lookup_code || null,
           lookup_url: core.lookup_url || null,
+          exchange_rate: parseNumber(core.exchange_rate),
           status: 'processed',
           raw_json: extractedData as unknown as Record<string, unknown>,
-          extend: (extractedData.extend || {}) as Record<string, unknown>,
+          extend: extractedData.extend && Object.keys(extractedData.extend).length > 0 
+            ? extractedData.extend as Record<string, unknown> 
+            : null,
         },
-        core.line_items?.map((item) => ({
+        lineItems.map((item) => ({
           item_code: item.item_code || null,
           description: item.description || null,
           unit: item.unit || null,
