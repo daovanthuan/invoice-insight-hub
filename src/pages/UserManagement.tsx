@@ -21,7 +21,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, Shield, User } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Users, Shield, User, Ban, CheckCircle } from 'lucide-react';
 
 interface UserWithRole {
   id: string;
@@ -30,6 +31,7 @@ interface UserWithRole {
   created_at: string;
   role_id: string;
   role_name: string;
+  status: 'active' | 'inactive';
 }
 
 interface Role {
@@ -75,7 +77,7 @@ const UserManagement = () => {
       // Fetch profiles
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, email, full_name');
+        .select('id, email, full_name, status');
 
       if (profilesError) throw profilesError;
 
@@ -90,6 +92,7 @@ const UserManagement = () => {
           created_at: ur.created_at,
           role_id: ur.role_id,
           role_name: role?.name || 'unknown',
+          status: (profile?.status as 'active' | 'inactive') || 'active',
         };
       });
 
@@ -134,6 +137,41 @@ const UserManagement = () => {
       toast({
         title: 'Lỗi',
         description: 'Không thể cập nhật vai trò',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const toggleUserStatus = async (userId: string, currentStatus: 'active' | 'inactive') => {
+    const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+    setUpdating(userId);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ status: newStatus })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      setUsers((prev) =>
+        prev.map((user) =>
+          user.id === userId ? { ...user, status: newStatus } : user
+        )
+      );
+
+      toast({
+        title: 'Thành công',
+        description: newStatus === 'active' 
+          ? 'Đã kích hoạt tài khoản' 
+          : 'Đã vô hiệu hóa tài khoản',
+      });
+    } catch (error) {
+      console.error('Error toggling user status:', error);
+      toast({
+        title: 'Lỗi',
+        description: 'Không thể thay đổi trạng thái tài khoản',
         variant: 'destructive',
       });
     } finally {
@@ -227,14 +265,15 @@ const UserManagement = () => {
                   <TableRow>
                     <TableHead>Người dùng</TableHead>
                     <TableHead>Email</TableHead>
-                    <TableHead>Ngày tạo</TableHead>
+                    <TableHead>Trạng thái</TableHead>
                     <TableHead>Vai trò hiện tại</TableHead>
                     <TableHead>Thay đổi vai trò</TableHead>
+                    <TableHead>Hành động</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {users.map((user) => (
-                    <TableRow key={user.id}>
+                    <TableRow key={user.id} className={user.status === 'inactive' ? 'opacity-60' : ''}>
                       <TableCell className="font-medium">
                         {user.full_name || user.id.slice(0, 8) + '...'}
                       </TableCell>
@@ -242,7 +281,19 @@ const UserManagement = () => {
                         {user.email || '-'}
                       </TableCell>
                       <TableCell>
-                        {new Date(user.created_at).toLocaleDateString('vi-VN')}
+                        <Badge variant={user.status === 'active' ? 'default' : 'destructive'}>
+                          {user.status === 'active' ? (
+                            <>
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Hoạt động
+                            </>
+                          ) : (
+                            <>
+                              <Ban className="h-3 w-3 mr-1" />
+                              Vô hiệu hóa
+                            </>
+                          )}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -265,7 +316,7 @@ const UserManagement = () => {
                         <Select
                           value={user.role_id}
                           onValueChange={(value) => updateUserRole(user.id, value)}
-                          disabled={updating === user.id}
+                          disabled={updating === user.id || user.status === 'inactive'}
                         >
                           <SelectTrigger className="w-40">
                             <SelectValue />
@@ -279,6 +330,26 @@ const UserManagement = () => {
                             ))}
                           </SelectContent>
                         </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant={user.status === 'active' ? 'destructive' : 'outline'}
+                          size="sm"
+                          onClick={() => toggleUserStatus(user.id, user.status)}
+                          disabled={updating === user.id}
+                        >
+                          {user.status === 'active' ? (
+                            <>
+                              <Ban className="h-4 w-4 mr-1" />
+                              Vô hiệu hóa
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Kích hoạt
+                            </>
+                          )}
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
