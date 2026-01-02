@@ -12,16 +12,7 @@ import {
   Upload,
   Clock,
   CheckCircle,
-  AlertCircle,
 } from 'lucide-react';
-
-// Helper function to parse amount from string
-const parseAmount = (value: string | null): number => {
-  if (!value) return 0;
-  const cleaned = value.replace(/[^0-9.-]/g, '');
-  const parsed = parseFloat(cleaned);
-  return isNaN(parsed) ? 0 : parsed;
-};
 
 const UserDashboard = () => {
   const { invoices, loading } = useInvoices();
@@ -31,17 +22,17 @@ const UserDashboard = () => {
     const totalInvoices = invoices.length;
     const processedInvoices = invoices.filter((inv) => inv.status === 'processed').length;
     const pendingInvoices = invoices.filter((inv) => inv.status === 'pending').length;
-    const failedInvoices = invoices.filter((inv) => inv.status === 'failed').length;
+    const rejectedInvoices = invoices.filter((inv) => inv.status === 'rejected').length;
     
     const totalAmount = invoices.reduce((sum, inv) => {
-      return sum + parseAmount(inv.total_amount);
+      return sum + (inv.total_amount || 0);
     }, 0);
 
     return {
       totalInvoices,
       processedInvoices,
       pendingInvoices,
-      failedInvoices,
+      rejectedInvoices,
       totalAmount,
     };
   }, [invoices]);
@@ -151,7 +142,7 @@ const UserDashboard = () => {
                       <FileText className="h-5 w-5 text-muted-foreground" />
                       <div>
                         <p className="font-medium text-sm">
-                          {invoice.vendor_name || invoice.file_name || 'Hóa đơn'}
+                          {invoice.vendor_name || invoice.invoice_number || 'Hóa đơn'}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {invoice.invoice_date || new Date(invoice.created_at).toLocaleDateString('vi-VN')}
@@ -160,7 +151,7 @@ const UserDashboard = () => {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-sm font-medium">
-                        {invoice.total_amount || '—'}
+                        {invoice.total_amount?.toLocaleString('vi-VN') || '—'}
                       </span>
                       <Badge
                         variant={
@@ -175,7 +166,9 @@ const UserDashboard = () => {
                           ? 'Đã xử lý'
                           : invoice.status === 'pending'
                           ? 'Đang chờ'
-                          : 'Lỗi'}
+                          : invoice.status === 'rejected'
+                          ? 'Từ chối'
+                          : invoice.status}
                       </Badge>
                     </div>
                   </div>
