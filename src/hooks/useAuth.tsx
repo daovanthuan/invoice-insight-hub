@@ -1,7 +1,6 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 
 interface AuthContextType {
   user: User | null;
@@ -18,7 +17,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDisabled, setIsDisabled] = useState(false);
-  const { toast } = useToast();
 
   const checkUserStatus = async (userId: string) => {
     try {
@@ -48,17 +46,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(currentSession?.user ?? null);
         setLoading(false);
 
-        // Check user status after login
-        if (currentSession?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) {
+        // Check user status after token refresh (not SIGNED_IN since Auth.tsx handles that)
+        if (currentSession?.user && event === 'TOKEN_REFRESHED') {
           setTimeout(async () => {
             const isActive = await checkUserStatus(currentSession.user.id);
             if (!isActive) {
               setIsDisabled(true);
-              toast({
-                title: 'Tài khoản bị vô hiệu hóa',
-                description: 'Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.',
-                variant: 'destructive',
-              });
               await supabase.auth.signOut();
               setUser(null);
               setSession(null);
@@ -75,15 +68,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setSession(existingSession);
       setUser(existingSession?.user ?? null);
       
+      // Only check status for existing sessions (page refresh), not new logins
       if (existingSession?.user) {
         const isActive = await checkUserStatus(existingSession.user.id);
         if (!isActive) {
           setIsDisabled(true);
-          toast({
-            title: 'Tài khoản bị vô hiệu hóa',
-            description: 'Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.',
-            variant: 'destructive',
-          });
           await supabase.auth.signOut();
           setUser(null);
           setSession(null);

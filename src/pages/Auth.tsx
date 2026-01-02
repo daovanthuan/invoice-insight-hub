@@ -68,7 +68,7 @@ const Auth = () => {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -79,10 +79,27 @@ const Auth = () => {
         } else {
           toast.error(error.message);
         }
-      } else {
-        toast.success("Đăng nhập thành công!");
-        navigate("/");
+        return;
       }
+
+      // Check if user account is active before showing success
+      if (data.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('status')
+          .eq('id', data.user.id)
+          .maybeSingle();
+
+        if (profile?.status === 'inactive') {
+          // Sign out immediately and show only the disabled message
+          await supabase.auth.signOut();
+          toast.error("Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.");
+          return;
+        }
+      }
+
+      toast.success("Đăng nhập thành công!");
+      navigate("/");
     } catch (error) {
       toast.error("Đã xảy ra lỗi. Vui lòng thử lại.");
     } finally {
