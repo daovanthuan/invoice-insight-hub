@@ -25,41 +25,77 @@ import { Users, Shield, User } from 'lucide-react';
 
 interface UserWithRole {
   id: string;
-  email: string;
+  email: string | null;
+  full_name: string | null;
   created_at: string;
-  role: 'admin' | 'user';
+  role_id: string;
+  role_name: string;
+}
+
+interface Role {
+  id: string;
+  name: string;
 }
 
 const UserManagement = () => {
   const [users, setUsers] = useState<UserWithRole[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchUsers();
+    fetchData();
   }, []);
 
-  const fetchUsers = async () => {
+  const fetchData = async () => {
     try {
-      // Fetch all user roles
-      const { data: roles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('*');
+      // Fetch all roles
+      const { data: rolesData, error: rolesError } = await supabase
+        .from('roles')
+        .select('id, name')
+        .eq('status', 'active');
 
       if (rolesError) throw rolesError;
+      setRoles(rolesData || []);
 
-      // Transform the data
-      const usersWithRoles: UserWithRole[] = (roles || []).map((role) => ({
-        id: role.user_id,
-        email: '', // We'll display user_id since we can't access auth.users
-        created_at: role.created_at,
-        role: role.role as 'admin' | 'user',
-      }));
+      // Fetch user roles with profile info
+      const { data: userRolesData, error: userRolesError } = await supabase
+        .from('user_roles')
+        .select(`
+          id,
+          user_id,
+          role_id,
+          created_at,
+          roles:role_id (id, name)
+        `);
+
+      if (userRolesError) throw userRolesError;
+
+      // Fetch profiles
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, email, full_name');
+
+      if (profilesError) throw profilesError;
+
+      // Combine data
+      const usersWithRoles: UserWithRole[] = (userRolesData || []).map((ur) => {
+        const profile = profilesData?.find(p => p.id === ur.user_id);
+        const role = ur.roles as unknown as { id: string; name: string } | null;
+        return {
+          id: ur.user_id,
+          email: profile?.email || null,
+          full_name: profile?.full_name || null,
+          created_at: ur.created_at,
+          role_id: ur.role_id,
+          role_name: role?.name || 'unknown',
+        };
+      });
 
       setUsers(usersWithRoles);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('Error fetching data:', error);
       toast({
         title: 'Lỗi',
         description: 'Không thể tải danh sách người dùng',
@@ -70,25 +106,28 @@ const UserManagement = () => {
     }
   };
 
-  const updateUserRole = async (userId: string, newRole: 'admin' | 'user') => {
+  const updateUserRole = async (userId: string, newRoleId: string) => {
     setUpdating(userId);
     try {
       const { error } = await supabase
         .from('user_roles')
-        .update({ role: newRole })
+        .update({ role_id: newRoleId })
         .eq('user_id', userId);
 
       if (error) throw error;
 
+      const newRole = roles.find(r => r.id === newRoleId);
       setUsers((prev) =>
         prev.map((user) =>
-          user.id === userId ? { ...user, role: newRole } : user
+          user.id === userId 
+            ? { ...user, role_id: newRoleId, role_name: newRole?.name || 'unknown' } 
+            : user
         )
       );
 
       toast({
         title: 'Thành công',
-        description: `Đã cập nhật vai trò thành ${newRole === 'admin' ? 'Quản trị viên' : 'Người dùng'}`,
+        description: `Đã cập nhật vai trò thành ${newRole?.name || 'unknown'}`,
       });
     } catch (error) {
       console.error('Error updating role:', error);
@@ -104,8 +143,8 @@ const UserManagement = () => {
 
   const stats = {
     total: users.length,
-    admins: users.filter((u) => u.role === 'admin').length,
-    regularUsers: users.filter((u) => u.role === 'user').length,
+    admins: users.filter((u) => u.role_name === 'admin').length,
+    regularUsers: users.filter((u) => u.role_name === 'user').length,
   };
 
   if (loading) {
@@ -186,7 +225,8 @@ const UserManagement = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>User ID</TableHead>
+                    <TableHead>Người dùng</TableHead>
+                    <TableHead>Email</TableHead>
                     <TableHead>Ngày tạo</TableHead>
                     <TableHead>Vai trò hiện tại</TableHead>
                     <TableHead>Thay đổi vai trò</TableHead>
@@ -195,17 +235,20 @@ const UserManagement = () => {
                 <TableBody>
                   {users.map((user) => (
                     <TableRow key={user.id}>
-                      <TableCell className="font-mono text-sm">
-                        {user.id.slice(0, 8)}...
+                      <TableCell className="font-medium">
+                        {user.full_name || user.id.slice(0, 8) + '...'}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {user.email || '-'}
                       </TableCell>
                       <TableCell>
                         {new Date(user.created_at).toLocaleDateString('vi-VN')}
                       </TableCell>
                       <TableCell>
                         <Badge
-                          variant={user.role === 'admin' ? 'default' : 'secondary'}
+                          variant={user.role_name === 'admin' ? 'default' : 'secondary'}
                         >
-                          {user.role === 'admin' ? (
+                          {user.role_name === 'admin' ? (
                             <>
                               <Shield className="h-3 w-3 mr-1" />
                               Quản trị viên
@@ -213,25 +256,27 @@ const UserManagement = () => {
                           ) : (
                             <>
                               <User className="h-3 w-3 mr-1" />
-                              Người dùng
+                              {user.role_name === 'user' ? 'Người dùng' : user.role_name}
                             </>
                           )}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         <Select
-                          value={user.role}
-                          onValueChange={(value: 'admin' | 'user') =>
-                            updateUserRole(user.id, value)
-                          }
+                          value={user.role_id}
+                          onValueChange={(value) => updateUserRole(user.id, value)}
                           disabled={updating === user.id}
                         >
                           <SelectTrigger className="w-40">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="user">Người dùng</SelectItem>
-                            <SelectItem value="admin">Quản trị viên</SelectItem>
+                            {roles.map((role) => (
+                              <SelectItem key={role.id} value={role.id}>
+                                {role.name === 'admin' ? 'Quản trị viên' : 
+                                 role.name === 'user' ? 'Người dùng' : role.name}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </TableCell>
