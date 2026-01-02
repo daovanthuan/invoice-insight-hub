@@ -39,8 +39,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Search, Filter, Eye, Download, FileText, Trash2, Loader2 } from 'lucide-react';
+import { Search, Filter, Eye, Download, FileText, Trash2, Loader2, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { InvoiceEditDialog } from '@/components/invoices/InvoiceEditDialog';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const statusStyles: Record<string, string> = {
   processed: 'bg-success/10 text-success border-success/20',
@@ -59,7 +62,7 @@ const statusLabels: Record<string, string> = {
 };
 
 export default function InvoicesPage() {
-  const { invoices, loading, fetchInvoiceItems, deleteInvoice } = useInvoices();
+  const { invoices, loading, fetchInvoiceItems, deleteInvoice, updateInvoice, fetchInvoices } = useInvoices();
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
@@ -67,6 +70,8 @@ export default function InvoicesPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
+  const [editItems, setEditItems] = useState<InvoiceItem[]>([]);
 
   const filteredInvoices = invoices.filter((invoice) => {
     const matchesSearch =
@@ -92,6 +97,54 @@ export default function InvoicesPage() {
     await deleteInvoice(deleteId);
     setIsDeleting(false);
     setDeleteId(null);
+  };
+
+  const handleEditInvoice = async (invoice: Invoice) => {
+    setEditInvoice(invoice);
+    const items = await fetchInvoiceItems(invoice.id);
+    setEditItems(items);
+  };
+
+  const handleSaveInvoice = async (
+    invoiceData: Partial<Invoice>,
+    items: Partial<InvoiceItem>[]
+  ): Promise<boolean> => {
+    if (!editInvoice) return false;
+
+    try {
+      // Update invoice
+      const success = await updateInvoice(editInvoice.id, invoiceData);
+      if (!success) return false;
+
+      // Delete existing items and insert new ones
+      await supabase.from('invoice_items').delete().eq('invoice_id', editInvoice.id);
+
+      if (items.length > 0) {
+        const itemsToInsert = items.map((item, index) => ({
+          invoice_id: editInvoice.id,
+          item_code: item.item_code || null,
+          description: item.description || null,
+          unit: item.unit || null,
+          quantity: item.quantity ?? null,
+          unit_price: item.unit_price ?? null,
+          amount: item.amount ?? null,
+          sort_order: index,
+        }));
+
+        const { error } = await supabase.from('invoice_items').insert(itemsToInsert);
+        if (error) {
+          console.error('Error updating invoice items:', error);
+          toast.error('Không thể cập nhật hàng hóa');
+          return false;
+        }
+      }
+
+      await fetchInvoices();
+      return true;
+    } catch (error) {
+      console.error('Error saving invoice:', error);
+      return false;
+    }
   };
 
   const exportCSV = () => {
@@ -238,6 +291,17 @@ export default function InvoicesPage() {
                           }}
                         >
                           <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditInvoice(invoice);
+                          }}
+                          className="text-muted-foreground hover:text-primary"
+                        >
+                          <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -455,6 +519,18 @@ export default function InvoicesPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Edit Invoice Dialog */}
+        <InvoiceEditDialog
+          invoice={editInvoice}
+          items={editItems}
+          open={!!editInvoice}
+          onClose={() => {
+            setEditInvoice(null);
+            setEditItems([]);
+          }}
+          onSave={handleSaveInvoice}
+        />
       </div>
     </MainLayout>
   );
