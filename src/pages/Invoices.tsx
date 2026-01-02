@@ -410,6 +410,25 @@ export default function InvoicesPage() {
                     {selectedInvoice.amount_in_words}
                   </p>
                 )}
+
+                {/* Extend Section */}
+                {selectedInvoice.extend && Object.keys(selectedInvoice.extend).length > 0 && (
+                  <div className="mt-6 pt-6 border-t border-border">
+                    <h4 className="mb-3 font-semibold text-primary">Thông tin mở rộng</h4>
+                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                      {Object.entries(selectedInvoice.extend).map(([key, value]) => (
+                        <div key={key} className="p-3 rounded-lg bg-muted/30">
+                          <p className="text-xs text-muted-foreground capitalize">
+                            {key.replace(/_/g, ' ')}
+                          </p>
+                          <p className="font-medium text-sm mt-1">
+                            {typeof value === 'object' ? JSON.stringify(value) : String(value || 'N/A')}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </DialogContent>
