@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
-import { useInvoices, InvoiceRecord, LineItemRecord } from '@/hooks/useInvoices';
+import { useInvoices } from '@/hooks/useInvoices';
+import { Invoice, InvoiceItem } from '@/types/database';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,15 +44,25 @@ import { cn } from '@/lib/utils';
 
 const statusStyles: Record<string, string> = {
   processed: 'bg-success/10 text-success border-success/20',
+  approved: 'bg-success/10 text-success border-success/20',
   pending: 'bg-warning/10 text-warning border-warning/20',
-  failed: 'bg-destructive/10 text-destructive border-destructive/20',
+  draft: 'bg-muted/50 text-muted-foreground border-muted',
+  rejected: 'bg-destructive/10 text-destructive border-destructive/20',
+};
+
+const statusLabels: Record<string, string> = {
+  processed: 'Đã xử lý',
+  approved: 'Đã duyệt',
+  pending: 'Đang chờ',
+  draft: 'Nháp',
+  rejected: 'Từ chối',
 };
 
 export default function InvoicesPage() {
-  const { invoices, loading, fetchLineItems, deleteInvoice } = useInvoices();
-  const [selectedInvoice, setSelectedInvoice] = useState<InvoiceRecord | null>(null);
-  const [lineItems, setLineItems] = useState<LineItemRecord[]>([]);
-  const [loadingLineItems, setLoadingLineItems] = useState(false);
+  const { invoices, loading, fetchInvoiceItems, deleteInvoice } = useInvoices();
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
+  const [loadingItems, setLoadingItems] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -59,21 +70,20 @@ export default function InvoicesPage() {
 
   const filteredInvoices = invoices.filter((invoice) => {
     const matchesSearch =
-      (invoice.invoice_id?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (invoice.vendor_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (invoice.file_name?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+      (invoice.invoice_number?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (invoice.vendor_name?.toLowerCase() || '').includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
 
-  const handleViewInvoice = async (invoice: InvoiceRecord) => {
+  const handleViewInvoice = async (invoice: Invoice) => {
     setSelectedInvoice(invoice);
-    setLoadingLineItems(true);
-    const items = await fetchLineItems(invoice.id);
-    setLineItems(items);
-    setLoadingLineItems(false);
+    setLoadingItems(true);
+    const items = await fetchInvoiceItems(invoice.id);
+    setInvoiceItems(items);
+    setLoadingItems(false);
   };
 
   const handleDelete = async () => {
@@ -85,13 +95,13 @@ export default function InvoicesPage() {
   };
 
   const exportCSV = () => {
-    const headers = ['Invoice ID', 'Vendor', 'Date', 'Currency', 'Total', 'Status'];
+    const headers = ['Invoice Number', 'Vendor', 'Date', 'Currency', 'Total', 'Status'];
     const rows = filteredInvoices.map((inv) => [
-      inv.invoice_id || '',
+      inv.invoice_number || '',
       inv.vendor_name || '',
       inv.invoice_date || '',
       inv.currency || '',
-      inv.total_amount || '',
+      String(inv.total_amount || ''),
       inv.status || '',
     ]);
 
@@ -103,6 +113,11 @@ export default function InvoicesPage() {
     a.download = 'invoices.csv';
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const formatAmount = (amount: number | null) => {
+    if (!amount) return '0';
+    return amount.toLocaleString('vi-VN');
   };
 
   return (
@@ -134,8 +149,10 @@ export default function InvoicesPage() {
             <SelectContent>
               <SelectItem value="all">Tất cả</SelectItem>
               <SelectItem value="processed">Đã xử lý</SelectItem>
+              <SelectItem value="approved">Đã duyệt</SelectItem>
               <SelectItem value="pending">Đang chờ</SelectItem>
-              <SelectItem value="failed">Lỗi</SelectItem>
+              <SelectItem value="draft">Nháp</SelectItem>
+              <SelectItem value="rejected">Từ chối</SelectItem>
             </SelectContent>
           </Select>
 
@@ -194,24 +211,20 @@ export default function InvoicesPage() {
                         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
                           <FileText className="h-4 w-4 text-primary" />
                         </div>
-                        {invoice.invoice_id || invoice.file_name || 'N/A'}
+                        {invoice.invoice_number || invoice.invoice_serial || 'N/A'}
                       </div>
                     </TableCell>
                     <TableCell>{invoice.vendor_name || 'N/A'}</TableCell>
                     <TableCell>{invoice.invoice_date || 'N/A'}</TableCell>
                     <TableCell className="font-semibold">
-                      {invoice.currency || ''} {invoice.total_amount || '0'}
+                      {invoice.currency || ''} {formatAmount(invoice.total_amount)}
                     </TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className={cn('capitalize', statusStyles[invoice.status || 'pending'])}
+                        className={cn('capitalize', statusStyles[invoice.status] || statusStyles.pending)}
                       >
-                        {invoice.status === 'processed'
-                          ? 'Đã xử lý'
-                          : invoice.status === 'failed'
-                          ? 'Lỗi'
-                          : 'Đang chờ'}
+                        {statusLabels[invoice.status] || invoice.status}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
@@ -252,7 +265,7 @@ export default function InvoicesPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-3">
                 <FileText className="h-5 w-5 text-primary" />
-                Chi tiết hóa đơn - {selectedInvoice?.invoice_id || selectedInvoice?.file_name}
+                Chi tiết hóa đơn - {selectedInvoice?.invoice_number || selectedInvoice?.invoice_serial}
               </DialogTitle>
             </DialogHeader>
 
@@ -324,11 +337,11 @@ export default function InvoicesPage() {
                 {/* Line Items */}
                 <div>
                   <h4 className="mb-3 font-semibold text-primary">Danh mục hàng hóa</h4>
-                  {loadingLineItems ? (
+                  {loadingItems ? (
                     <div className="flex items-center justify-center p-8">
                       <Loader2 className="h-6 w-6 animate-spin text-primary" />
                     </div>
-                  ) : lineItems.length === 0 ? (
+                  ) : invoiceItems.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center p-4">
                       Không có dữ liệu hàng hóa
                     </p>
@@ -346,7 +359,7 @@ export default function InvoicesPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {lineItems.map((item, idx) => (
+                          {invoiceItems.map((item, idx) => (
                             <TableRow key={idx}>
                               <TableCell className="font-mono text-xs">
                                 {item.item_code || 'N/A'}
@@ -357,10 +370,10 @@ export default function InvoicesPage() {
                                 {item.quantity || '0'}
                               </TableCell>
                               <TableCell className="text-sm text-right">
-                                {item.unit_price || '0'}
+                                {formatAmount(item.unit_price)}
                               </TableCell>
                               <TableCell className="font-semibold text-right">
-                                {item.amount || '0'}
+                                {formatAmount(item.amount)}
                               </TableCell>
                             </TableRow>
                           ))}
@@ -375,18 +388,18 @@ export default function InvoicesPage() {
                   <div className="w-64 space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Cộng tiền hàng</span>
-                      <span>{selectedInvoice.subtotal || '0'}</span>
+                      <span>{formatAmount(selectedInvoice.subtotal)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">
-                        Thuế ({selectedInvoice.tax_rate || '0%'})
+                        Thuế ({selectedInvoice.tax_rate || '0'}%)
                       </span>
-                      <span>{selectedInvoice.tax_amount || '0'}</span>
+                      <span>{formatAmount(selectedInvoice.tax_amount)}</span>
                     </div>
                     <div className="flex justify-between pt-2 border-t border-border font-semibold text-lg">
                       <span>Tổng cộng</span>
                       <span className="text-primary">
-                        {selectedInvoice.currency || ''} {selectedInvoice.total_amount || '0'}
+                        {selectedInvoice.currency || ''} {formatAmount(selectedInvoice.total_amount)}
                       </span>
                     </div>
                   </div>
@@ -412,20 +425,13 @@ export default function InvoicesPage() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={isDeleting}>Hủy</AlertDialogCancel>
+              <AlertDialogCancel>Hủy</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                className="bg-destructive hover:bg-destructive/90"
               >
-                {isDeleting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Đang xóa...
-                  </>
-                ) : (
-                  'Xóa'
-                )}
+                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Xóa'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

@@ -2,49 +2,11 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
-
-export interface InvoiceRecord {
-  id: string;
-  vendor_name: string | null;
-  vendor_tax_id: string | null;
-  vendor_address: string | null;
-  vendor_phone: string | null;
-  buyer_name: string | null;
-  buyer_tax_id: string | null;
-  buyer_address: string | null;
-  invoice_id: string | null;
-  invoice_serial: string | null;
-  invoice_date: string | null;
-  payment_method: string | null;
-  currency: string | null;
-  subtotal: string | null;
-  tax_rate: string | null;
-  tax_amount: string | null;
-  total_amount: string | null;
-  amount_in_words: string | null;
-  status: string | null;
-  file_name: string | null;
-  file_path: string | null;
-  raw_json: any;
-  extend: any;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface LineItemRecord {
-  id: string;
-  invoice_id: string;
-  item_code: string | null;
-  description: string | null;
-  unit: string | null;
-  quantity: string | null;
-  unit_price: string | null;
-  amount: string | null;
-}
+import { Invoice, InvoiceItem, InvoiceStatus } from "@/types/database";
 
 export const useInvoices = () => {
   const { user } = useAuth();
-  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchInvoices = async () => {
@@ -61,7 +23,7 @@ export const useInvoices = () => {
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setInvoices(data || []);
+      setInvoices((data as Invoice[]) || []);
     } catch (error) {
       console.error("Error fetching invoices:", error);
       toast.error("Không thể tải danh sách hóa đơn");
@@ -70,22 +32,26 @@ export const useInvoices = () => {
     }
   };
 
-  const fetchLineItems = async (invoiceId: string): Promise<LineItemRecord[]> => {
+  const fetchInvoiceItems = async (invoiceId: string): Promise<InvoiceItem[]> => {
     try {
       const { data, error } = await supabase
-        .from("line_items")
+        .from("invoice_items")
         .select("*")
-        .eq("invoice_id", invoiceId);
+        .eq("invoice_id", invoiceId)
+        .order("sort_order", { ascending: true });
 
       if (error) throw error;
-      return data || [];
+      return (data as InvoiceItem[]) || [];
     } catch (error) {
-      console.error("Error fetching line items:", error);
+      console.error("Error fetching invoice items:", error);
       return [];
     }
   };
 
-  const createInvoice = async (invoiceData: Partial<InvoiceRecord>, lineItems?: Partial<LineItemRecord>[]) => {
+  const createInvoice = async (
+    invoiceData: Partial<Invoice>, 
+    items?: Partial<InvoiceItem>[]
+  ) => {
     if (!user) {
       toast.error("Vui lòng đăng nhập để tạo hóa đơn");
       return null;
@@ -96,25 +62,29 @@ export const useInvoices = () => {
         .from("invoices")
         .insert({
           ...invoiceData,
-          user_id: user.id,
-        })
+          owner_id: user.id,
+          created_by: user.id,
+          extend: invoiceData.extend ? JSON.parse(JSON.stringify(invoiceData.extend)) : null,
+          raw_json: invoiceData.raw_json ? JSON.parse(JSON.stringify(invoiceData.raw_json)) : null,
+        } as any)
         .select()
         .single();
 
       if (invoiceError) throw invoiceError;
 
-      if (lineItems && lineItems.length > 0 && invoice) {
-        const lineItemsWithInvoiceId = lineItems.map(item => ({
+      if (items && items.length > 0 && invoice) {
+        const itemsWithInvoiceId = items.map((item, index) => ({
           ...item,
           invoice_id: invoice.id,
+          sort_order: index,
         }));
 
-        const { error: lineItemsError } = await supabase
-          .from("line_items")
-          .insert(lineItemsWithInvoiceId);
+        const { error: itemsError } = await supabase
+          .from("invoice_items")
+          .insert(itemsWithInvoiceId);
 
-        if (lineItemsError) {
-          console.error("Error inserting line items:", lineItemsError);
+        if (itemsError) {
+          console.error("Error inserting invoice items:", itemsError);
         }
       }
 
@@ -127,19 +97,37 @@ export const useInvoices = () => {
     }
   };
 
-  const updateInvoiceStatus = async (invoiceId: string, status: string) => {
+  const updateInvoice = async (invoiceId: string, updates: Partial<Invoice>) => {
+    if (!user) {
+      toast.error("Vui lòng đăng nhập");
+      return false;
+    }
+
     try {
+      const updateData: any = {
+        ...updates,
+        updated_by: user.id,
+      };
+      if (updates.extend) updateData.extend = JSON.parse(JSON.stringify(updates.extend));
+      if (updates.raw_json) updateData.raw_json = JSON.parse(JSON.stringify(updates.raw_json));
+      
       const { error } = await supabase
         .from("invoices")
-        .update({ status })
+        .update(updateData)
         .eq("id", invoiceId);
 
       if (error) throw error;
       await fetchInvoices();
+      return true;
     } catch (error) {
-      console.error("Error updating invoice status:", error);
-      toast.error("Không thể cập nhật trạng thái hóa đơn");
+      console.error("Error updating invoice:", error);
+      toast.error("Không thể cập nhật hóa đơn");
+      return false;
     }
+  };
+
+  const updateInvoiceStatus = async (invoiceId: string, status: InvoiceStatus) => {
+    return updateInvoice(invoiceId, { status });
   };
 
   const deleteInvoice = async (invoiceId: string) => {
@@ -166,8 +154,9 @@ export const useInvoices = () => {
     invoices,
     loading,
     fetchInvoices,
-    fetchLineItems,
+    fetchInvoiceItems,
     createInvoice,
+    updateInvoice,
     updateInvoiceStatus,
     deleteInvoice,
   };

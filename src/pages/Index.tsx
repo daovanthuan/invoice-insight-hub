@@ -15,14 +15,6 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
-// Helper function to parse amount from string
-const parseAmount = (value: string | null): number => {
-  if (!value) return 0;
-  const cleaned = value.replace(/[^0-9.-]/g, '');
-  const parsed = parseFloat(cleaned);
-  return isNaN(parsed) ? 0 : parsed;
-};
-
 // Helper function to format currency
 const formatCurrency = (amount: number): string => {
   if (amount >= 1_000_000_000) {
@@ -42,12 +34,12 @@ const Index = () => {
     const totalInvoices = invoices.length;
     
     const totalAmount = invoices.reduce((sum, inv) => {
-      return sum + parseAmount(inv.total_amount);
+      return sum + (inv.total_amount || 0);
     }, 0);
 
     const pendingInvoices = invoices.filter((inv) => inv.status === 'pending').length;
     const processedInvoices = invoices.filter((inv) => inv.status === 'processed').length;
-    const failedInvoices = invoices.filter((inv) => inv.status === 'failed').length;
+    const rejectedInvoices = invoices.filter((inv) => inv.status === 'rejected').length;
 
     const averageAmount = totalInvoices > 0 ? totalAmount / totalInvoices : 0;
 
@@ -67,7 +59,7 @@ const Index = () => {
       }
       
       const existing = acc.find((item) => item.month === month);
-      const amount = parseAmount(inv.total_amount);
+      const amount = inv.total_amount || 0;
       
       if (existing) {
         existing.amount += amount;
@@ -82,7 +74,7 @@ const Index = () => {
     const vendorData = invoices.reduce((acc: any[], inv) => {
       const vendor = inv.vendor_name || 'Unknown';
       const existing = acc.find((item) => item.vendor === vendor);
-      const amount = parseAmount(inv.total_amount);
+      const amount = inv.total_amount || 0;
       
       if (existing) {
         existing.amount += amount;
@@ -99,7 +91,7 @@ const Index = () => {
     const statusDistribution = [
       { status: 'processed', count: processedInvoices, fill: 'hsl(var(--success))' },
       { status: 'pending', count: pendingInvoices, fill: 'hsl(var(--warning))' },
-      { status: 'failed', count: failedInvoices, fill: 'hsl(var(--destructive))' },
+      { status: 'rejected', count: rejectedInvoices, fill: 'hsl(var(--destructive))' },
     ].filter((item) => item.count > 0);
 
     return {
@@ -116,36 +108,36 @@ const Index = () => {
   // Convert for RecentInvoices component
   const recentInvoicesFormatted = invoices.slice(0, 5).map((inv) => ({
     id: inv.id,
-    filename: inv.file_name || 'invoice.pdf',
-    status: (inv.status as 'processed' | 'pending' | 'error') || 'pending',
+    filename: inv.invoice_number || 'invoice.pdf',
+    status: (inv.status === 'processed' ? 'processed' : inv.status === 'rejected' ? 'error' : 'pending') as 'processed' | 'pending' | 'error',
     core: {
       vendor_name: inv.vendor_name || '',
       vendor_tax_id: inv.vendor_tax_id || '',
       vendor_address: inv.vendor_address || '',
       vendor_phone: inv.vendor_phone || '',
-      vendor_fax: '',
-      vendor_account_no: '',
+      vendor_fax: inv.vendor_fax || '',
+      vendor_account_no: inv.vendor_account_no || '',
       buyer_name: inv.buyer_name || '',
       buyer_tax_id: inv.buyer_tax_id || '',
       buyer_address: inv.buyer_address || '',
-      buyer_account_no: '',
-      invoice_id: inv.invoice_id || '',
+      buyer_account_no: inv.buyer_account_no || '',
+      invoice_id: inv.invoice_number || '',
       invoice_serial: inv.invoice_serial || '',
       invoice_date: inv.invoice_date || '',
       payment_method: inv.payment_method || '',
       currency: inv.currency || '',
-      exchange_rate: '',
-      tax_authority_code: '',
-      lookup_code: '',
-      lookup_url: '',
-      subtotal: inv.subtotal || '',
-      tax_rate: inv.tax_rate || '',
-      tax_amount: inv.tax_amount || '',
-      total_amount: inv.total_amount || '',
+      exchange_rate: String(inv.exchange_rate || ''),
+      tax_authority_code: inv.tax_authority_code || '',
+      lookup_code: inv.lookup_code || '',
+      lookup_url: inv.lookup_url || '',
+      subtotal: String(inv.subtotal || ''),
+      tax_rate: String(inv.tax_rate || ''),
+      tax_amount: String(inv.tax_amount || ''),
+      total_amount: String(inv.total_amount || ''),
       amount_in_words: inv.amount_in_words || '',
       line_items: [],
     },
-    extend: inv.extend || {},
+    extend: (inv.extend || {}) as Record<string, unknown>,
     createdAt: new Date(inv.created_at),
   }));
 
@@ -197,7 +189,7 @@ const Index = () => {
           />
           <StatCard
             title="Đang chờ xử lý"
-            value={stats.pendingInvoices}
+            value={String(stats.pendingInvoices)}
             change="Cần xem xét"
             changeType="neutral"
             icon={Clock}

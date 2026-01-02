@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   Loader2,
   AlertCircle,
-  ImageIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useInvoiceExtraction } from '@/hooks/useInvoiceExtraction';
@@ -43,6 +42,13 @@ export default function UploadPage() {
     e.preventDefault();
     setIsDragging(false);
   }, []);
+
+  const parseNumber = (value: string | undefined | null): number | null => {
+    if (!value) return null;
+    const cleaned = value.replace(/[^0-9.-]/g, '');
+    const parsed = parseFloat(cleaned);
+    return isNaN(parsed) ? null : parsed;
+  };
 
   const processFile = async (uploadedFile: UploadedFile) => {
     // Update status to processing
@@ -75,31 +81,36 @@ export default function UploadPage() {
           vendor_tax_id: core.vendor_tax_id || null,
           vendor_address: core.vendor_address || null,
           vendor_phone: core.vendor_phone || null,
+          vendor_fax: core.vendor_fax || null,
+          vendor_account_no: core.vendor_account_no || null,
           buyer_name: core.buyer_name || null,
           buyer_tax_id: core.buyer_tax_id || null,
           buyer_address: core.buyer_address || null,
-          invoice_id: core.invoice_id || null,
+          buyer_account_no: core.buyer_account_no || null,
+          invoice_number: core.invoice_id || null,
           invoice_serial: core.invoice_serial || null,
           invoice_date: core.invoice_date || null,
           payment_method: core.payment_method || null,
           currency: core.currency || null,
-          subtotal: core.subtotal || null,
-          tax_rate: core.tax_rate || null,
-          tax_amount: core.tax_amount || null,
-          total_amount: core.total_amount || null,
+          subtotal: parseNumber(core.subtotal),
+          tax_rate: parseNumber(core.tax_rate),
+          tax_amount: parseNumber(core.tax_amount),
+          total_amount: parseNumber(core.total_amount),
           amount_in_words: core.amount_in_words || null,
+          tax_authority_code: core.tax_authority_code || null,
+          lookup_code: core.lookup_code || null,
+          lookup_url: core.lookup_url || null,
           status: 'processed',
-          file_name: uploadedFile.file.name,
-          raw_json: extractedData,
-          extend: extractedData.extend || {},
+          raw_json: extractedData as unknown as Record<string, unknown>,
+          extend: (extractedData.extend || {}) as Record<string, unknown>,
         },
         core.line_items?.map((item) => ({
           item_code: item.item_code || null,
           description: item.description || null,
           unit: item.unit || null,
-          quantity: item.quantity || null,
-          unit_price: item.unit_price || null,
-          amount: item.amount || null,
+          quantity: parseNumber(item.quantity),
+          unit_price: parseNumber(item.unit_price),
+          amount: parseNumber(item.amount),
         }))
       );
 

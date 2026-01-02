@@ -2,25 +2,17 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
-
-export interface UserSettings {
-  id: string;
-  user_id: string;
-  date_format: string;
-  default_currency: string;
-  email_notifications: boolean;
-  error_alerts: boolean;
-  weekly_reports: boolean;
-  created_at: string;
-  updated_at: string;
-}
+import { UserSettings } from "@/types/database";
 
 const defaultSettings: Omit<UserSettings, 'id' | 'user_id' | 'created_at' | 'updated_at'> = {
-  date_format: 'dmy',
+  date_format: 'dd/MM/yyyy',
   default_currency: 'VND',
+  language: 'vi',
+  timezone: 'Asia/Ho_Chi_Minh',
   email_notifications: true,
   error_alerts: true,
   weekly_reports: false,
+  theme: 'system',
 };
 
 export const useUserSettings = () => {
@@ -46,9 +38,9 @@ export const useUserSettings = () => {
       if (error) throw error;
 
       if (data) {
-        setSettings(data);
+        setSettings(data as UserSettings);
       } else {
-        // Create default settings for new user
+        // Settings should be created by trigger, but create if missing
         const { data: newSettings, error: insertError } = await supabase
           .from("user_settings")
           .insert({
@@ -59,7 +51,7 @@ export const useUserSettings = () => {
           .single();
 
         if (insertError) throw insertError;
-        setSettings(newSettings);
+        setSettings(newSettings as UserSettings);
       }
     } catch (error) {
       console.error("Error fetching settings:", error);

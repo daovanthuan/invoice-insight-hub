@@ -26,14 +26,6 @@ import {
   Line,
 } from 'recharts';
 
-// Helper function to parse amount from string
-const parseAmount = (value: string | null): number => {
-  if (!value) return 0;
-  const cleaned = value.replace(/[^0-9.-]/g, '');
-  const parsed = parseFloat(cleaned);
-  return isNaN(parsed) ? 0 : parsed;
-};
-
 // Helper function to format currency
 const formatCurrency = (amount: number): string => {
   if (amount >= 1_000_000_000) {
@@ -77,8 +69,8 @@ export default function AnalyticsPage() {
       : thisWeekCount > 0 ? 100 : 0;
 
     // Weekly revenue
-    const thisWeekRevenue = thisWeekInvoices.reduce((sum, inv) => sum + parseAmount(inv.total_amount), 0);
-    const lastWeekRevenue = lastWeekInvoices.reduce((sum, inv) => sum + parseAmount(inv.total_amount), 0);
+    const thisWeekRevenue = thisWeekInvoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+    const lastWeekRevenue = lastWeekInvoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
     const revenueChange = lastWeekRevenue > 0 
       ? Math.round(((thisWeekRevenue - lastWeekRevenue) / lastWeekRevenue) * 100)
       : thisWeekRevenue > 0 ? 100 : 0;
@@ -100,7 +92,7 @@ export default function AnalyticsPage() {
       return {
         day,
         invoices: dayInvoices.length,
-        amount: dayInvoices.reduce((sum, inv) => sum + parseAmount(inv.total_amount), 0),
+        amount: dayInvoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0),
       };
     });
 
@@ -157,7 +149,7 @@ export default function AnalyticsPage() {
         }
       }
       const existing = acc.find((item) => item.month === month);
-      const amount = parseAmount(inv.total_amount);
+      const amount = inv.total_amount || 0;
       if (existing) {
         existing.amount += amount;
         existing.count += 1;
@@ -171,7 +163,7 @@ export default function AnalyticsPage() {
     const vendorData = invoices.reduce((acc: any[], inv) => {
       const vendor = inv.vendor_name || 'Unknown';
       const existing = acc.find((item) => item.vendor === vendor);
-      const amount = parseAmount(inv.total_amount);
+      const amount = inv.total_amount || 0;
       if (existing) {
         existing.amount += amount;
       } else {
@@ -184,12 +176,12 @@ export default function AnalyticsPage() {
 
     // Status distribution
     const pendingInvoices = invoices.filter((inv) => inv.status === 'pending').length;
-    const failedInvoices = invoices.filter((inv) => inv.status === 'failed').length;
+    const rejectedInvoices = invoices.filter((inv) => inv.status === 'rejected').length;
 
     const statusDistribution = [
       { status: 'processed', count: processedCount, fill: 'hsl(var(--success))' },
       { status: 'pending', count: pendingInvoices, fill: 'hsl(var(--warning))' },
-      { status: 'failed', count: failedInvoices, fill: 'hsl(var(--destructive))' },
+      { status: 'rejected', count: rejectedInvoices, fill: 'hsl(var(--destructive))' },
     ].filter((item) => item.count > 0);
 
     return {
