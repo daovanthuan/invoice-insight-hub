@@ -40,84 +40,78 @@ interface ExtractedData {
   extend?: Record<string, any>;
 }
 
-export const useInvoiceExtraction = () => {
-  const [isExtracting, setIsExtracting] = useState(false);
-  const [progress, setProgress] = useState(0);
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const result = reader.result as string;
+      // Remove the data URL prefix to get just the base64 string
+      const base64 = result.split(",")[1];
+      resolve(base64);
+    };
+    reader.onerror = (error) => reject(error);
+  });
+};
 
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        const result = reader.result as string;
-        // Remove the data URL prefix to get just the base64 string
-        const base64 = result.split(",")[1];
-        resolve(base64);
-      };
-      reader.onerror = (error) => reject(error);
+const extractInvoiceAsync = async (file: File): Promise<ExtractedData | null> => {
+  try {
+    // Validate file type - support images and PDFs
+    const validImageTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+    const isPdf = file.type === "application/pdf";
+
+    if (!isPdf && !validImageTypes.includes(file.type)) {
+      toast.error("Chỉ hỗ trợ file ảnh (PNG, JPG, WEBP) hoặc PDF");
+      return null;
+    }
+
+    // Convert file to base64
+    const fileBase64 = await fileToBase64(file);
+    const mimeType = file.type;
+
+    // Call edge function - send file directly, let AI handle PDF
+    const { data, error } = await supabase.functions.invoke("extract-invoice", {
+      body: {
+        imageBase64: fileBase64,
+        mimeType,
+      },
     });
-  };
+
+    if (error) {
+      console.error("Extraction error:", error);
+      toast.error("Lỗi khi trích xuất hóa đơn");
+      return null;
+    }
+
+    if (!data?.success) {
+      toast.error(data?.error || "Không thể trích xuất dữ liệu từ hóa đơn");
+      return null;
+    }
+
+    toast.success("Trích xuất hóa đơn thành công!");
+
+    return data.data as ExtractedData;
+  } catch (error) {
+    console.error("Extraction error:", error);
+    toast.error("Đã xảy ra lỗi khi trích xuất hóa đơn");
+    return null;
+  }
+};
+
+export const useInvoiceExtraction = () => {
+  const [extractingCount, setExtractingCount] = useState(0);
 
   const extractInvoice = async (file: File): Promise<ExtractedData | null> => {
-    setIsExtracting(true);
-    setProgress(10);
-
+    setExtractingCount((prev) => prev + 1);
     try {
-      // Validate file type - support images and PDFs
-      const validImageTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
-      const isPdf = file.type === "application/pdf";
-
-      if (!isPdf && !validImageTypes.includes(file.type)) {
-        toast.error("Chỉ hỗ trợ file ảnh (PNG, JPG, WEBP) hoặc PDF");
-        return null;
-      }
-
-      setProgress(25);
-
-      // Convert file to base64
-      const fileBase64 = await fileToBase64(file);
-      const mimeType = file.type;
-
-      setProgress(55);
-
-      // Call edge function - send file directly, let AI handle PDF
-      const { data, error } = await supabase.functions.invoke("extract-invoice", {
-        body: {
-          imageBase64: fileBase64,
-          mimeType,
-        },
-      });
-
-      setProgress(80);
-
-      if (error) {
-        console.error("Extraction error:", error);
-        toast.error("Lỗi khi trích xuất hóa đơn");
-        return null;
-      }
-
-      if (!data?.success) {
-        toast.error(data?.error || "Không thể trích xuất dữ liệu từ hóa đơn");
-        return null;
-      }
-
-      setProgress(100);
-      toast.success("Trích xuất hóa đơn thành công!");
-
-      return data.data as ExtractedData;
-    } catch (error) {
-      console.error("Extraction error:", error);
-      toast.error("Đã xảy ra lỗi khi trích xuất hóa đơn");
-      return null;
+      return await extractInvoiceAsync(file);
     } finally {
-      setIsExtracting(false);
-      setProgress(0);
+      setExtractingCount((prev) => prev - 1);
     }
   };
 
   return {
     extractInvoice,
-    isExtracting,
-    progress,
+    isExtracting: extractingCount > 0,
   };
 };
