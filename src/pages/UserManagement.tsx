@@ -18,16 +18,35 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Users, Shield, User, Ban, CheckCircle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Users, Shield, User, Ban, CheckCircle, Plus, Pencil, Phone, MapPin, Calendar, Hash } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface UserWithRole {
   id: string;
   email: string | null;
   full_name: string | null;
+  phone: string | null;
+  address: string | null;
+  user_code: string | null;
+  date_of_birth: string | null;
+  gender: 'male' | 'female' | 'other' | null;
+  avatar_url: string | null;
   created_at: string;
   role_id: string;
   role_name: string;
@@ -39,11 +58,35 @@ interface Role {
   name: string;
 }
 
+interface UserFormData {
+  full_name: string;
+  email: string;
+  phone: string;
+  address: string;
+  user_code: string;
+  date_of_birth: string;
+  gender: 'male' | 'female' | 'other' | '';
+}
+
+const initialFormData: UserFormData = {
+  full_name: '',
+  email: '',
+  phone: '',
+  address: '',
+  user_code: '',
+  date_of_birth: '',
+  gender: '',
+};
+
 const UserManagement = () => {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<UserWithRole | null>(null);
+  const [formData, setFormData] = useState<UserFormData>(initialFormData);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -74,10 +117,10 @@ const UserManagement = () => {
 
       if (userRolesError) throw userRolesError;
 
-      // Fetch profiles
+      // Fetch profiles with all fields
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, email, full_name, status');
+        .select('id, email, full_name, status, phone, address, user_code, date_of_birth, gender, avatar_url, created_at');
 
       if (profilesError) throw profilesError;
 
@@ -89,7 +132,13 @@ const UserManagement = () => {
           id: ur.user_id,
           email: profile?.email || null,
           full_name: profile?.full_name || null,
-          created_at: ur.created_at,
+          phone: profile?.phone || null,
+          address: profile?.address || null,
+          user_code: profile?.user_code || null,
+          date_of_birth: profile?.date_of_birth || null,
+          gender: profile?.gender as 'male' | 'female' | 'other' | null,
+          avatar_url: profile?.avatar_url || null,
+          created_at: profile?.created_at || ur.created_at,
           role_id: ur.role_id,
           role_name: role?.name || 'unknown',
           status: (profile?.status as 'active' | 'inactive') || 'active',
@@ -179,6 +228,87 @@ const UserManagement = () => {
     }
   };
 
+  const openEditDialog = (user: UserWithRole) => {
+    setEditingUser(user);
+    setFormData({
+      full_name: user.full_name || '',
+      email: user.email || '',
+      phone: user.phone || '',
+      address: user.address || '',
+      user_code: user.user_code || '',
+      date_of_birth: user.date_of_birth || '',
+      gender: user.gender || '',
+    });
+    setIsDialogOpen(true);
+  };
+
+  const closeDialog = () => {
+    setIsDialogOpen(false);
+    setEditingUser(null);
+    setFormData(initialFormData);
+  };
+
+  const handleSaveUser = async () => {
+    if (!editingUser) return;
+    
+    setIsSaving(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: formData.full_name || null,
+          phone: formData.phone || null,
+          address: formData.address || null,
+          user_code: formData.user_code || null,
+          date_of_birth: formData.date_of_birth || null,
+          gender: formData.gender || null,
+        })
+        .eq('id', editingUser.id);
+
+      if (error) throw error;
+
+      setUsers((prev) =>
+        prev.map((user) =>
+          user.id === editingUser.id
+            ? {
+                ...user,
+                full_name: formData.full_name || null,
+                phone: formData.phone || null,
+                address: formData.address || null,
+                user_code: formData.user_code || null,
+                date_of_birth: formData.date_of_birth || null,
+                gender: (formData.gender as 'male' | 'female' | 'other') || null,
+              }
+            : user
+        )
+      );
+
+      toast({
+        title: 'Thành công',
+        description: 'Đã cập nhật thông tin người dùng',
+      });
+      closeDialog();
+    } catch (error) {
+      console.error('Error updating user:', error);
+      toast({
+        title: 'Lỗi',
+        description: 'Không thể cập nhật thông tin người dùng',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const getGenderLabel = (gender: string | null) => {
+    switch (gender) {
+      case 'male': return 'Nam';
+      case 'female': return 'Nữ';
+      case 'other': return 'Khác';
+      default: return '-';
+    }
+  };
+
   const stats = {
     total: users.length,
     admins: users.filter((u) => u.role_name === 'admin').length,
@@ -264,9 +394,12 @@ const UserManagement = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Người dùng</TableHead>
-                    <TableHead>Email</TableHead>
+                    <TableHead>Mã NV</TableHead>
+                    <TableHead>SĐT</TableHead>
+                    <TableHead>Giới tính</TableHead>
+                    <TableHead>Ngày sinh</TableHead>
                     <TableHead>Trạng thái</TableHead>
-                    <TableHead>Vai trò hiện tại</TableHead>
+                    <TableHead>Vai trò</TableHead>
                     <TableHead>Thay đổi vai trò</TableHead>
                     <TableHead>Hành động</TableHead>
                   </TableRow>
@@ -274,11 +407,31 @@ const UserManagement = () => {
                 <TableBody>
                   {users.map((user) => (
                     <TableRow key={user.id} className={user.status === 'inactive' ? 'opacity-60' : ''}>
-                      <TableCell className="font-medium">
-                        {user.full_name || user.id.slice(0, 8) + '...'}
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarImage src={user.avatar_url || undefined} alt={user.full_name || 'User'} />
+                            <AvatarFallback className="text-xs">
+                              {user.full_name?.charAt(0).toUpperCase() || 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{user.full_name || '-'}</p>
+                            <p className="text-xs text-muted-foreground">{user.email || '-'}</p>
+                          </div>
+                        </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {user.email || '-'}
+                        {user.user_code || '-'}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {user.phone || '-'}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {getGenderLabel(user.gender)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {user.date_of_birth ? format(new Date(user.date_of_birth), 'dd/MM/yyyy') : '-'}
                       </TableCell>
                       <TableCell>
                         <Badge variant={user.status === 'active' ? 'default' : 'destructive'}>
@@ -332,24 +485,28 @@ const UserManagement = () => {
                         </Select>
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant={user.status === 'active' ? 'destructive' : 'outline'}
-                          size="sm"
-                          onClick={() => toggleUserStatus(user.id, user.status)}
-                          disabled={updating === user.id}
-                        >
-                          {user.status === 'active' ? (
-                            <>
-                              <Ban className="h-4 w-4 mr-1" />
-                              Vô hiệu hóa
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle className="h-4 w-4 mr-1" />
-                              Kích hoạt
-                            </>
-                          )}
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEditDialog(user)}
+                            disabled={updating === user.id}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant={user.status === 'active' ? 'destructive' : 'outline'}
+                            size="sm"
+                            onClick={() => toggleUserStatus(user.id, user.status)}
+                            disabled={updating === user.id}
+                          >
+                            {user.status === 'active' ? (
+                              <Ban className="h-4 w-4" />
+                            ) : (
+                              <CheckCircle className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -358,6 +515,100 @@ const UserManagement = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Edit User Dialog */}
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Chỉnh sửa thông tin người dùng</DialogTitle>
+              <DialogDescription>
+                Cập nhật thông tin chi tiết của người dùng
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="full_name">Họ và tên</Label>
+                <Input
+                  id="full_name"
+                  value={formData.full_name}
+                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                  placeholder="Nhập họ và tên"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  value={formData.email}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="user_code">Mã nhân viên</Label>
+                <Input
+                  id="user_code"
+                  value={formData.user_code}
+                  onChange={(e) => setFormData({ ...formData, user_code: e.target.value })}
+                  placeholder="Nhập mã nhân viên"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Số điện thoại</Label>
+                <Input
+                  id="phone"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="Nhập số điện thoại"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="address">Địa chỉ</Label>
+                <Input
+                  id="address"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  placeholder="Nhập địa chỉ"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="date_of_birth">Ngày sinh</Label>
+                  <Input
+                    id="date_of_birth"
+                    type="date"
+                    value={formData.date_of_birth}
+                    onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="gender">Giới tính</Label>
+                  <Select
+                    value={formData.gender}
+                    onValueChange={(value) => setFormData({ ...formData, gender: value as 'male' | 'female' | 'other' | '' })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Chọn giới tính" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Nam</SelectItem>
+                      <SelectItem value="female">Nữ</SelectItem>
+                      <SelectItem value="other">Khác</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={closeDialog}>
+                Hủy
+              </Button>
+              <Button onClick={handleSaveUser} disabled={isSaving}>
+                {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );
