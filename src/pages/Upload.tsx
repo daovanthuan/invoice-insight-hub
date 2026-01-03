@@ -17,6 +17,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useInvoiceExtraction } from '@/hooks/useInvoiceExtraction';
 import { useInvoices } from '@/hooks/useInvoices';
+import { useCreateNotification } from '@/hooks/useCreateNotification';
 
 interface UploadedFile {
   id: string;
@@ -32,6 +33,7 @@ export default function UploadPage() {
   const [isDragging, setIsDragging] = useState(false);
   const { extractInvoice, isExtracting } = useInvoiceExtraction();
   const { createInvoice } = useInvoices();
+  const { createNotification } = useCreateNotification();
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -136,6 +138,14 @@ export default function UploadPage() {
               : f
           )
         );
+        
+        // Create success notification
+        await createNotification({
+          title: 'Trích xuất thành công',
+          message: `Hóa đơn "${core.invoice_id || uploadedFile.file.name}" đã được trích xuất và lưu thành công.`,
+          type: 'success',
+          link: '/invoices',
+        });
       } else {
         setFiles((prev) =>
           prev.map((f) =>
@@ -144,6 +154,13 @@ export default function UploadPage() {
               : f
           )
         );
+        
+        // Create error notification
+        await createNotification({
+          title: 'Lưu hóa đơn thất bại',
+          message: `Không thể lưu hóa đơn "${uploadedFile.file.name}" vào cơ sở dữ liệu.`,
+          type: 'error',
+        });
       }
     } catch (error) {
       console.error('Error processing file:', error);
@@ -154,6 +171,13 @@ export default function UploadPage() {
             : f
         )
       );
+      
+      // Create error notification
+      await createNotification({
+        title: 'Lỗi xử lý hóa đơn',
+        message: `Đã xảy ra lỗi khi xử lý file "${uploadedFile.file.name}".`,
+        type: 'error',
+      });
     }
   };
 

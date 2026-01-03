@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
 import { useInvoices } from '@/hooks/useInvoices';
+import { useCreateNotification } from '@/hooks/useCreateNotification';
 import { Invoice, InvoiceItem } from '@/types/database';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -66,6 +67,7 @@ const statusLabels: Record<string, string> = {
 
 export default function InvoicesPage() {
   const { invoices, loading, fetchInvoiceItems, updateInvoice, fetchInvoices } = useInvoices();
+  const { createNotification } = useCreateNotification();
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
@@ -78,11 +80,20 @@ export default function InvoicesPage() {
 
   const handleCancelInvoice = async () => {
     if (!cancelId) return;
+    const invoiceToCancel = invoices.find(inv => inv.id === cancelId);
     setIsCancelling(true);
     await updateInvoice(cancelId, { status: 'cancelled' });
     setIsCancelling(false);
     setCancelId(null);
     toast.success('Đã hủy hóa đơn');
+    
+    // Create notification for cancelled invoice
+    await createNotification({
+      title: 'Hóa đơn đã bị hủy',
+      message: `Hóa đơn "${invoiceToCancel?.invoice_number || invoiceToCancel?.invoice_serial || 'N/A'}" đã được hủy.`,
+      type: 'warning',
+      link: '/invoices',
+    });
   };
 
   const filteredInvoices = invoices.filter((invoice) => {
