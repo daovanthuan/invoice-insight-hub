@@ -48,6 +48,8 @@ interface UserWithRole {
   gender: 'male' | 'female' | 'other' | null;
   avatar_url: string | null;
   created_at: string;
+  updated_at: string | null;
+  updated_by_name: string | null;
   role_id: string;
   role_name: string;
   status: 'active' | 'inactive';
@@ -120,7 +122,17 @@ const UserManagement = () => {
       // Fetch profiles with all fields
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, email, full_name, status, phone, address, user_code, date_of_birth, gender, avatar_url, created_at');
+        .select('id, email, full_name, status, phone, address, user_code, date_of_birth, gender, avatar_url, created_at, updated_at');
+
+      if (profilesError) throw profilesError;
+
+      // Create a map of user ids to names for updated_by lookup
+      const profileNameMap = new Map<string, string>();
+      profilesData?.forEach(p => {
+        if (p.id && p.full_name) {
+          profileNameMap.set(p.id, p.full_name);
+        }
+      });
 
       if (profilesError) throw profilesError;
 
@@ -139,6 +151,8 @@ const UserManagement = () => {
           gender: profile?.gender as 'male' | 'female' | 'other' | null,
           avatar_url: profile?.avatar_url || null,
           created_at: profile?.created_at || ur.created_at,
+          updated_at: profile?.updated_at || null,
+          updated_by_name: null, // Will be populated if we add updated_by to profiles
           role_id: ur.role_id,
           role_name: role?.name || 'unknown',
           status: (profile?.status as 'active' | 'inactive') || 'active',
@@ -398,6 +412,8 @@ const UserManagement = () => {
                     <TableHead>SĐT</TableHead>
                     <TableHead>Giới tính</TableHead>
                     <TableHead>Ngày sinh</TableHead>
+                    <TableHead>Ngày tạo</TableHead>
+                    <TableHead>Cập nhật</TableHead>
                     <TableHead>Trạng thái</TableHead>
                     <TableHead>Vai trò</TableHead>
                     <TableHead>Thay đổi vai trò</TableHead>
@@ -432,6 +448,14 @@ const UserManagement = () => {
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {user.date_of_birth ? format(new Date(user.date_of_birth), 'dd/MM/yyyy') : '-'}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-xs">
+                        {user.created_at ? format(new Date(user.created_at), 'dd/MM/yyyy HH:mm') : '-'}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-xs">
+                        {user.updated_at && user.updated_at !== user.created_at 
+                          ? format(new Date(user.updated_at), 'dd/MM/yyyy HH:mm') 
+                          : '-'}
                       </TableCell>
                       <TableCell>
                         <Badge variant={user.status === 'active' ? 'default' : 'destructive'}>
