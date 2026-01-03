@@ -187,10 +187,8 @@ export default function UploadPage() {
 
     setFiles((prev) => [...prev, ...newFiles]);
 
-    // Process files sequentially
-    for (const uploadedFile of newFiles) {
-      await processFile(uploadedFile);
-    }
+    // Process all files concurrently (parallel processing)
+    await Promise.all(newFiles.map((uploadedFile) => processFile(uploadedFile)));
   }, []);
 
   const handleFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -212,10 +210,8 @@ export default function UploadPage() {
 
     setFiles((prev) => [...prev, ...newFiles]);
 
-    // Process files sequentially
-    for (const uploadedFile of newFiles) {
-      await processFile(uploadedFile);
-    }
+    // Process all files concurrently (parallel processing)
+    await Promise.all(newFiles.map((uploadedFile) => processFile(uploadedFile)));
 
     // Reset input
     e.target.value = '';
