@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { format } from 'date-fns';
 import { motion } from 'framer-motion';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
@@ -247,15 +248,21 @@ export default function InvoicesPage() {
                 <TableRow className="border-border hover:bg-transparent">
                   <TableHead className="text-muted-foreground">Mã HĐ</TableHead>
                   <TableHead className="text-muted-foreground">Nhà cung cấp</TableHead>
-                  <TableHead className="text-muted-foreground">Ngày</TableHead>
+                  <TableHead className="text-muted-foreground">Ngày HĐ</TableHead>
                   <TableHead className="text-muted-foreground">Tổng tiền</TableHead>
                   <TableHead className="text-muted-foreground">Trạng thái</TableHead>
+                  <TableHead className="text-muted-foreground">Ngày tạo</TableHead>
+                  <TableHead className="text-muted-foreground">Cập nhật</TableHead>
                   <TableHead className="text-muted-foreground text-right">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredInvoices.map((invoice, index) => {
                   const isCancelled = invoice.status === 'cancelled';
+                  const createdAt = invoice.created_at ? new Date(invoice.created_at) : null;
+                  const updatedAt = invoice.updated_at ? new Date(invoice.updated_at) : null;
+                  const isUpdated = createdAt && updatedAt && updatedAt.getTime() - createdAt.getTime() > 1000;
+                  
                   return (
                   <motion.tr
                     key={invoice.id}
@@ -288,6 +295,12 @@ export default function InvoicesPage() {
                       >
                         {statusLabels[invoice.status] || invoice.status}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {createdAt ? format(createdAt, 'dd/MM/yyyy HH:mm') : 'N/A'}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {isUpdated ? format(updatedAt, 'dd/MM/yyyy HH:mm') : '-'}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
