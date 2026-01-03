@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -34,32 +36,56 @@ import {
   LogOut,
   Lock,
   Loader2,
+  Camera,
+  Phone,
+  MapPin,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserSettings } from '@/hooks/useUserSettings';
+import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 
 export default function SettingsPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { settings, loading, saving, updateSettings } = useUserSettings();
+  const { settings, loading: settingsLoading, saving, updateSettings } = useUserSettings();
+  const { profile, loading: profileLoading, saving: profileSaving, updateProfile } = useProfile();
   
+  const loading = settingsLoading || profileLoading;
+  
+  // Profile states
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [profileInitialized, setProfileInitialized] = useState(false);
+  
+  // Settings states
   const [dateFormat, setDateFormat] = useState<string>('');
   const [defaultCurrency, setDefaultCurrency] = useState<string>('');
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [errorAlerts, setErrorAlerts] = useState(true);
   const [weeklyReports, setWeeklyReports] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [hasProfileChanges, setHasProfileChanges] = useState(false);
 
   // Password change states
-  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [changingPassword, setChangingPassword] = useState(false);
 
-  // Initialize form when settings load
+  // Initialize profile form
+  useEffect(() => {
+    if (profile && !profileInitialized) {
+      setFullName(profile.full_name || '');
+      setPhone(profile.phone || '');
+      setAddress(profile.address || '');
+      setProfileInitialized(true);
+    }
+  }, [profile, profileInitialized]);
+
+  // Initialize settings form when settings load
   if (settings && !hasChanges) {
     if (dateFormat === '') setDateFormat(settings.date_format);
     if (defaultCurrency === '') setDefaultCurrency(settings.default_currency);
@@ -70,6 +96,15 @@ export default function SettingsPage() {
 
   const handleChange = () => {
     setHasChanges(true);
+  };
+
+  const handleSaveProfile = async () => {
+    await updateProfile({
+      full_name: fullName,
+      phone,
+      address,
+    });
+    setHasProfileChanges(false);
   };
 
   const handleSave = async () => {
@@ -103,7 +138,6 @@ export default function SettingsPage() {
       if (error) throw error;
 
       toast.success('Đã đổi mật khẩu thành công');
-      setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (error: any) {
@@ -143,7 +177,7 @@ export default function SettingsPage() {
 
       <div className="p-6 max-w-4xl">
         <div className="space-y-8">
-          {/* Account Section */}
+          {/* Profile Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -154,29 +188,124 @@ export default function SettingsPage() {
                 <User className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-foreground">Tài khoản</h3>
-                <p className="text-sm text-muted-foreground">Thông tin tài khoản của bạn</p>
+                <h3 className="text-lg font-semibold text-foreground">Hồ sơ cá nhân</h3>
+                <p className="text-sm text-muted-foreground">Thông tin hiển thị của bạn</p>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              {/* Avatar */}
+              <div className="flex items-center gap-4">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage src={profile?.avatar_url || undefined} alt={profile?.full_name || 'User'} />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xl">
+                    {fullName ? fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm text-muted-foreground">
+                    Avatar được lấy từ email của bạn
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Họ và tên</Label>
+                  <Input
+                    id="fullName"
+                    value={fullName}
+                    onChange={(e) => {
+                      setFullName(e.target.value);
+                      setHasProfileChanges(true);
+                    }}
+                    className="bg-muted/50"
+                    placeholder="Nhập họ và tên"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Email</Label>
+                  <Input 
+                    value={user?.email || ''} 
+                    disabled 
+                    className="bg-muted/50" 
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="flex items-center gap-2">
+                    <Phone className="h-3 w-3" />
+                    Số điện thoại
+                  </Label>
+                  <Input
+                    id="phone"
+                    value={phone}
+                    onChange={(e) => {
+                      setPhone(e.target.value);
+                      setHasProfileChanges(true);
+                    }}
+                    className="bg-muted/50"
+                    placeholder="Nhập số điện thoại"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="address" className="flex items-center gap-2">
+                    <MapPin className="h-3 w-3" />
+                    Địa chỉ
+                  </Label>
+                  <Input
+                    id="address"
+                    value={address}
+                    onChange={(e) => {
+                      setAddress(e.target.value);
+                      setHasProfileChanges(true);
+                    }}
+                    className="bg-muted/50"
+                    placeholder="Nhập địa chỉ"
+                  />
+                </div>
+              </div>
+
+              {hasProfileChanges && (
+                <Button 
+                  onClick={handleSaveProfile} 
+                  disabled={profileSaving}
+                  className="gap-2"
+                >
+                  {profileSaving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  Lưu hồ sơ
+                </Button>
+              )}
+            </div>
+          </motion.div>
+
+          {/* Security Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="glass rounded-xl p-6"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="rounded-lg bg-primary/10 p-2">
+                <Lock className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Bảo mật</h3>
+                <p className="text-sm text-muted-foreground">Mật khẩu và đăng xuất</p>
               </div>
             </div>
 
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input 
-                  value={user?.email || ''} 
-                  disabled 
-                  className="bg-muted/50" 
-                />
-              </div>
-
-              <Separator />
-
               {/* Change Password */}
               <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Lock className="h-4 w-4 text-muted-foreground" />
-                  <Label className="text-base font-medium">Đổi mật khẩu</Label>
-                </div>
+                <Label className="text-base font-medium">Đổi mật khẩu</Label>
                 
                 <div className="grid gap-4 md:grid-cols-3">
                   <div className="space-y-2">

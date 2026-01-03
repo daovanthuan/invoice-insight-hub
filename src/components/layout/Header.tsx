@@ -1,6 +1,7 @@
-import { Bell, Search, User } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { NotificationDropdown } from './NotificationDropdown';
+import { UserDropdown } from './UserDropdown';
 
 interface HeaderProps {
   title: string;
@@ -21,21 +22,13 @@ export function Header({ title, subtitle }: HeaderProps) {
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search invoices..."
+            placeholder="Tìm kiếm..."
             className="w-64 bg-muted/50 pl-9 focus:bg-muted"
           />
         </div>
 
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
-            3
-          </span>
-        </Button>
-
-        <Button variant="ghost" size="icon" className="rounded-full">
-          <User className="h-5 w-5" />
-        </Button>
+        <NotificationDropdown />
+        <UserDropdown />
       </div>
     </header>
   );
