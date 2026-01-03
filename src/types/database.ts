@@ -1,7 +1,7 @@
 // Database enums
 export type EntityStatus = 'active' | 'inactive' | 'deleted';
 export type FileStatus = 'pending' | 'processing' | 'completed' | 'error';
-export type InvoiceStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'processed';
+export type InvoiceStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'processed' | 'cancelled';
 export type GenderType = 'male' | 'female' | 'other';
 export type NotificationType = 'info' | 'warning' | 'error' | 'success';
 
