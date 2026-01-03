@@ -39,7 +39,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Search, Filter, Eye, Download, FileText, Trash2, Loader2, Pencil } from 'lucide-react';
+import { Search, Filter, Eye, Download, FileText, Trash2, Loader2, Pencil, Ban } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { InvoiceEditDialog } from '@/components/invoices/InvoiceEditDialog';
 import { supabase } from '@/integrations/supabase/client';
@@ -51,6 +51,7 @@ const statusStyles: Record<string, string> = {
   pending: 'bg-warning/10 text-warning border-warning/20',
   draft: 'bg-muted/50 text-muted-foreground border-muted',
   rejected: 'bg-destructive/10 text-destructive border-destructive/20',
+  cancelled: 'bg-muted/50 text-muted-foreground border-muted line-through',
 };
 
 const statusLabels: Record<string, string> = {
@@ -59,6 +60,7 @@ const statusLabels: Record<string, string> = {
   pending: 'Đang chờ',
   draft: 'Nháp',
   rejected: 'Từ chối',
+  cancelled: 'Đã hủy',
 };
 
 export default function InvoicesPage() {
@@ -72,6 +74,17 @@ export default function InvoicesPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
   const [editItems, setEditItems] = useState<InvoiceItem[]>([]);
+  const [cancelId, setCancelId] = useState<string | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  const handleCancelInvoice = async () => {
+    if (!cancelId) return;
+    setIsCancelling(true);
+    await updateInvoice(cancelId, { status: 'cancelled' });
+    setIsCancelling(false);
+    setCancelId(null);
+    toast.success('Đã hủy hóa đơn');
+  };
 
   const filteredInvoices = invoices.filter((invoice) => {
     const matchesSearch =
@@ -206,6 +219,7 @@ export default function InvoicesPage() {
               <SelectItem value="pending">Đang chờ</SelectItem>
               <SelectItem value="draft">Nháp</SelectItem>
               <SelectItem value="rejected">Từ chối</SelectItem>
+              <SelectItem value="cancelled">Đã hủy</SelectItem>
             </SelectContent>
           </Select>
 
@@ -250,13 +264,18 @@ export default function InvoicesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredInvoices.map((invoice, index) => (
+                {filteredInvoices.map((invoice, index) => {
+                  const isCancelled = invoice.status === 'cancelled';
+                  return (
                   <motion.tr
                     key={invoice.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.05 * index }}
-                    className="border-border hover:bg-muted/30 cursor-pointer"
+                    className={cn(
+                      "border-border cursor-pointer",
+                      isCancelled ? "opacity-50 bg-muted/20" : "hover:bg-muted/30"
+                    )}
                     onClick={() => handleViewInvoice(invoice)}
                   >
                     <TableCell className="font-medium">
@@ -292,32 +311,49 @@ export default function InvoicesPage() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditInvoice(invoice);
-                          }}
-                          className="text-muted-foreground hover:text-primary"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteId(invoice.id);
-                          }}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {!isCancelled && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditInvoice(invoice);
+                              }}
+                              className="text-muted-foreground hover:text-primary"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCancelId(invoice.id);
+                              }}
+                              className="text-muted-foreground hover:text-warning"
+                              title="Hủy hóa đơn"
+                            >
+                              <Ban className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteId(invoice.id);
+                              }}
+                              className="text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </motion.tr>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           )}
@@ -515,6 +551,28 @@ export default function InvoicesPage() {
                 className="bg-destructive hover:bg-destructive/90"
               >
                 {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Xóa'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Cancel Confirmation */}
+        <AlertDialog open={!!cancelId} onOpenChange={() => setCancelId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Xác nhận hủy hóa đơn</AlertDialogTitle>
+              <AlertDialogDescription>
+                Hóa đơn sẽ được đánh dấu là đã hủy và không thể chỉnh sửa. Bạn vẫn có thể xem nhưng không thể thao tác gì trên hóa đơn này.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Đóng</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleCancelInvoice}
+                disabled={isCancelling}
+                className="bg-warning hover:bg-warning/90 text-warning-foreground"
+              >
+                {isCancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Hủy hóa đơn'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

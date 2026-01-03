@@ -835,6 +835,7 @@ export type Database = {
         | "approved"
         | "rejected"
         | "processed"
+        | "cancelled"
       notification_type: "info" | "warning" | "error" | "success"
     }
     CompositeTypes: {
@@ -966,7 +967,14 @@ export const Constants = {
       entity_status: ["active", "inactive", "deleted"],
       file_status: ["pending", "processing", "completed", "error"],
       gender_type: ["male", "female", "other"],
-      invoice_status: ["draft", "pending", "approved", "rejected", "processed"],
+      invoice_status: [
+        "draft",
+        "pending",
+        "approved",
+        "rejected",
+        "processed",
+        "cancelled",
+      ],
       notification_type: ["info", "warning", "error", "success"],
     },
   },
