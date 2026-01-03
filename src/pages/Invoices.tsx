@@ -39,7 +39,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Search, Filter, Eye, Download, FileText, Trash2, Loader2, Pencil, Ban } from 'lucide-react';
+import { Search, Filter, Eye, Download, FileText, Loader2, Pencil, Ban } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { InvoiceEditDialog } from '@/components/invoices/InvoiceEditDialog';
 import { supabase } from '@/integrations/supabase/client';
@@ -64,14 +64,12 @@ const statusLabels: Record<string, string> = {
 };
 
 export default function InvoicesPage() {
-  const { invoices, loading, fetchInvoiceItems, deleteInvoice, updateInvoice, fetchInvoices } = useInvoices();
+  const { invoices, loading, fetchInvoiceItems, updateInvoice, fetchInvoices } = useInvoices();
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
   const [editItems, setEditItems] = useState<InvoiceItem[]>([]);
   const [cancelId, setCancelId] = useState<string | null>(null);
@@ -102,14 +100,6 @@ export default function InvoicesPage() {
     const items = await fetchInvoiceItems(invoice.id);
     setInvoiceItems(items);
     setLoadingItems(false);
-  };
-
-  const handleDelete = async () => {
-    if (!deleteId) return;
-    setIsDeleting(true);
-    await deleteInvoice(deleteId);
-    setIsDeleting(false);
-    setDeleteId(null);
   };
 
   const handleEditInvoice = async (invoice: Invoice) => {
@@ -336,17 +326,6 @@ export default function InvoicesPage() {
                             >
                               <Ban className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setDeleteId(invoice.id);
-                              }}
-                              className="text-muted-foreground hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
                           </>
                         )}
                       </div>
@@ -533,28 +512,6 @@ export default function InvoicesPage() {
             )}
           </DialogContent>
         </Dialog>
-
-        {/* Delete Confirmation */}
-        <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Xác nhận xóa</AlertDialogTitle>
-              <AlertDialogDescription>
-                Bạn có chắc chắn muốn xóa hóa đơn này? Hành động này không thể hoàn tác.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Hủy</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDelete}
-                disabled={isDeleting}
-                className="bg-destructive hover:bg-destructive/90"
-              >
-                {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Xóa'}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
 
         {/* Cancel Confirmation */}
         <AlertDialog open={!!cancelId} onOpenChange={() => setCancelId(null)}>
