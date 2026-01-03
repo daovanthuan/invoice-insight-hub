@@ -544,6 +544,7 @@ export type Database = {
           phone: string | null
           status: Database["public"]["Enums"]["entity_status"]
           updated_at: string
+          updated_by: string | null
           user_code: string | null
         }
         Insert: {
@@ -558,6 +559,7 @@ export type Database = {
           phone?: string | null
           status?: Database["public"]["Enums"]["entity_status"]
           updated_at?: string
+          updated_by?: string | null
           user_code?: string | null
         }
         Update: {
@@ -572,9 +574,18 @@ export type Database = {
           phone?: string | null
           status?: Database["public"]["Enums"]["entity_status"]
           updated_at?: string
+          updated_by?: string | null
           user_code?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       role_permissions: {
         Row: {

@@ -36,6 +36,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Users, Shield, User, Ban, CheckCircle, Plus, Pencil, Phone, MapPin, Calendar, Hash } from 'lucide-react';
 import { format } from 'date-fns';
+import { useAuth } from '@/hooks/useAuth';
 
 interface UserWithRole {
   id: string;
@@ -49,6 +50,7 @@ interface UserWithRole {
   avatar_url: string | null;
   created_at: string;
   updated_at: string | null;
+  updated_by: string | null;
   updated_by_name: string | null;
   role_id: string;
   role_name: string;
@@ -81,6 +83,7 @@ const initialFormData: UserFormData = {
 };
 
 const UserManagement = () => {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
@@ -122,7 +125,7 @@ const UserManagement = () => {
       // Fetch profiles with all fields
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, email, full_name, status, phone, address, user_code, date_of_birth, gender, avatar_url, created_at, updated_at');
+        .select('id, email, full_name, status, phone, address, user_code, date_of_birth, gender, avatar_url, created_at, updated_at, updated_by');
 
       if (profilesError) throw profilesError;
 
@@ -152,7 +155,8 @@ const UserManagement = () => {
           avatar_url: profile?.avatar_url || null,
           created_at: profile?.created_at || ur.created_at,
           updated_at: profile?.updated_at || null,
-          updated_by_name: null, // Will be populated if we add updated_by to profiles
+          updated_by: profile?.updated_by || null,
+          updated_by_name: profile?.updated_by ? profileNameMap.get(profile.updated_by) || null : null,
           role_id: ur.role_id,
           role_name: role?.name || 'unknown',
           status: (profile?.status as 'active' | 'inactive') || 'active',
@@ -276,10 +280,15 @@ const UserManagement = () => {
           user_code: formData.user_code || null,
           date_of_birth: formData.date_of_birth || null,
           gender: formData.gender || null,
+          updated_by: currentUser?.id || null,
         })
         .eq('id', editingUser.id);
 
       if (error) throw error;
+
+      // Get current user's name for display
+      const currentUserProfile = users.find(u => u.id === currentUser?.id);
+      const updatedByName = currentUserProfile?.full_name || currentUser?.email || null;
 
       setUsers((prev) =>
         prev.map((user) =>
@@ -292,6 +301,9 @@ const UserManagement = () => {
                 user_code: formData.user_code || null,
                 date_of_birth: formData.date_of_birth || null,
                 gender: (formData.gender as 'male' | 'female' | 'other') || null,
+                updated_at: new Date().toISOString(),
+                updated_by: currentUser?.id || null,
+                updated_by_name: updatedByName,
               }
             : user
         )
@@ -414,6 +426,7 @@ const UserManagement = () => {
                     <TableHead>Ngày sinh</TableHead>
                     <TableHead>Ngày tạo</TableHead>
                     <TableHead>Cập nhật</TableHead>
+                    <TableHead>Sửa bởi</TableHead>
                     <TableHead>Trạng thái</TableHead>
                     <TableHead>Vai trò</TableHead>
                     <TableHead>Thay đổi vai trò</TableHead>
@@ -456,6 +469,9 @@ const UserManagement = () => {
                         {user.updated_at && user.updated_at !== user.created_at 
                           ? format(new Date(user.updated_at), 'dd/MM/yyyy HH:mm') 
                           : '-'}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-xs">
+                        {user.updated_by_name || '-'}
                       </TableCell>
                       <TableCell>
                         <Badge variant={user.status === 'active' ? 'default' : 'destructive'}>
