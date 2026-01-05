@@ -263,7 +263,9 @@ export default function InvoicesPage() {
                   <TableHead className="text-muted-foreground">Tổng tiền</TableHead>
                   <TableHead className="text-muted-foreground">Trạng thái</TableHead>
                   <TableHead className="text-muted-foreground">Người tạo</TableHead>
+                  <TableHead className="text-muted-foreground">Ngày tạo</TableHead>
                   <TableHead className="text-muted-foreground">Người cập nhật</TableHead>
+                  <TableHead className="text-muted-foreground">Ngày cập nhật</TableHead>
                   <TableHead className="text-muted-foreground text-right">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
@@ -311,7 +313,13 @@ export default function InvoicesPage() {
                       {invoice.created_by_profile?.user_code || '-'}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
+                      {createdAt ? format(createdAt, 'dd/MM/yyyy HH:mm') : '-'}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
                       {isUpdated ? (invoice.updated_by_profile?.user_code || '-') : '-'}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {isUpdated ? format(updatedAt, 'dd/MM/yyyy HH:mm') : '-'}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
