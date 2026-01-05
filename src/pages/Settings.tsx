@@ -41,7 +41,6 @@ import {
   MapPin,
   Sun,
   Moon,
-  Monitor,
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
@@ -525,7 +524,7 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="grid gap-3 grid-cols-3">
+            <div className="grid gap-3 grid-cols-2">
               <button
                 onClick={() => setTheme('light')}
                 className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
@@ -543,7 +542,7 @@ export default function SettingsPage() {
               <button
                 onClick={() => setTheme('dark')}
                 className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
-                  theme === 'dark' 
+                  theme === 'dark' || theme === 'system'
                     ? 'border-primary bg-primary/10' 
                     : 'border-border hover:border-primary/50'
                 }`}
@@ -552,20 +551,6 @@ export default function SettingsPage() {
                   <Moon className="h-6 w-6 text-slate-200" />
                 </div>
                 <span className="text-sm font-medium">Tối</span>
-              </button>
-              
-              <button
-                onClick={() => setTheme('system')}
-                className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
-                  theme === 'system' 
-                    ? 'border-primary bg-primary/10' 
-                    : 'border-border hover:border-primary/50'
-                }`}
-              >
-                <div className="p-3 rounded-full bg-gradient-to-br from-amber-100 to-slate-800">
-                  <Monitor className="h-6 w-6 text-primary" />
-                </div>
-                <span className="text-sm font-medium">Hệ thống</span>
               </button>
             </div>
           </motion.div>
