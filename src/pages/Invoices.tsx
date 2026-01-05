@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { format, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { motion } from 'framer-motion';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -75,8 +75,6 @@ export default function InvoicesPage() {
   const [loadingItems, setLoadingItems] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [currencyFilter, setCurrencyFilter] = useState<string>('all');
-  const [creatorFilter, setCreatorFilter] = useState<string>('all');
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
@@ -84,36 +82,14 @@ export default function InvoicesPage() {
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
 
-  // Get unique currencies and creators for filter options
-  const currencies = useMemo(() => {
-    const currencySet = new Set<string>();
-    invoices.forEach((inv) => {
-      if (inv.currency) currencySet.add(inv.currency);
-    });
-    return Array.from(currencySet).sort();
-  }, [invoices]);
-
-  const creators = useMemo(() => {
-    const creatorMap = new Map<string, string>();
-    invoices.forEach((inv) => {
-      if (inv.created_by && inv.created_by_profile?.user_code) {
-        creatorMap.set(inv.created_by, inv.created_by_profile.user_code);
-      }
-    });
-    return Array.from(creatorMap.entries()).map(([id, code]) => ({ id, code }));
-  }, [invoices]);
-
   const clearAllFilters = () => {
     setSearchTerm('');
     setStatusFilter('all');
-    setCurrencyFilter('all');
-    setCreatorFilter('all');
     setDateFrom(undefined);
     setDateTo(undefined);
   };
 
-  const hasActiveFilters = searchTerm || statusFilter !== 'all' || currencyFilter !== 'all' || 
-    creatorFilter !== 'all' || dateFrom || dateTo;
+  const hasActiveFilters = searchTerm || statusFilter !== 'all' || dateFrom || dateTo;
 
   const handleCancelInvoice = async () => {
     if (!cancelId) return;
@@ -140,8 +116,6 @@ export default function InvoicesPage() {
       (invoice.buyer_name?.toLowerCase() || '').includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
-    const matchesCurrency = currencyFilter === 'all' || invoice.currency === currencyFilter;
-    const matchesCreator = creatorFilter === 'all' || invoice.created_by === creatorFilter;
 
     // Date range filter (based on created_at)
     let matchesDate = true;
@@ -163,7 +137,7 @@ export default function InvoicesPage() {
       }
     }
 
-    return matchesSearch && matchesStatus && matchesCurrency && matchesCreator && matchesDate;
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
   const handleViewInvoice = async (invoice: Invoice) => {
@@ -287,33 +261,6 @@ export default function InvoicesPage() {
               </SelectContent>
             </Select>
 
-            <Select value={currencyFilter} onValueChange={setCurrencyFilter}>
-              <SelectTrigger className="w-[130px] bg-muted/50">
-                <SelectValue placeholder="Loại tiền" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả tiền</SelectItem>
-                {currencies.map((currency) => (
-                  <SelectItem key={currency} value={currency}>
-                    {currency}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={creatorFilter} onValueChange={setCreatorFilter}>
-              <SelectTrigger className="w-[150px] bg-muted/50">
-                <SelectValue placeholder="Người tạo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả NV</SelectItem>
-                {creators.map((creator) => (
-                  <SelectItem key={creator.id} value={creator.id}>
-                    {creator.code}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           {/* Row 2: Date filters and actions */}
