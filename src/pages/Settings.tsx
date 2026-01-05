@@ -39,7 +39,11 @@ import {
   Camera,
   Phone,
   MapPin,
+  Sun,
+  Moon,
+  Monitor,
 } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserSettings } from '@/hooks/useUserSettings';
@@ -52,6 +56,7 @@ export default function SettingsPage() {
   const { user } = useAuth();
   const { settings, loading: settingsLoading, saving, updateSettings } = useUserSettings();
   const { profile, loading: profileLoading, saving: profileSaving, updateProfile } = useProfile();
+  const { theme, setTheme } = useTheme();
   
   const loading = settingsLoading || profileLoading;
   
@@ -500,6 +505,68 @@ export default function SettingsPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+          </motion.div>
+
+          {/* Appearance Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25 }}
+            className="glass rounded-xl p-6"
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <div className="rounded-lg bg-primary/10 p-2">
+                <Sun className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Giao diện</h3>
+                <p className="text-sm text-muted-foreground">Tùy chỉnh màu nền ứng dụng</p>
+              </div>
+            </div>
+
+            <div className="grid gap-3 grid-cols-3">
+              <button
+                onClick={() => setTheme('light')}
+                className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
+                  theme === 'light' 
+                    ? 'border-primary bg-primary/10' 
+                    : 'border-border hover:border-primary/50'
+                }`}
+              >
+                <div className="p-3 rounded-full bg-amber-100">
+                  <Sun className="h-6 w-6 text-amber-600" />
+                </div>
+                <span className="text-sm font-medium">Sáng</span>
+              </button>
+              
+              <button
+                onClick={() => setTheme('dark')}
+                className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
+                  theme === 'dark' 
+                    ? 'border-primary bg-primary/10' 
+                    : 'border-border hover:border-primary/50'
+                }`}
+              >
+                <div className="p-3 rounded-full bg-slate-800">
+                  <Moon className="h-6 w-6 text-slate-200" />
+                </div>
+                <span className="text-sm font-medium">Tối</span>
+              </button>
+              
+              <button
+                onClick={() => setTheme('system')}
+                className={`flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
+                  theme === 'system' 
+                    ? 'border-primary bg-primary/10' 
+                    : 'border-border hover:border-primary/50'
+                }`}
+              >
+                <div className="p-3 rounded-full bg-gradient-to-br from-amber-100 to-slate-800">
+                  <Monitor className="h-6 w-6 text-primary" />
+                </div>
+                <span className="text-sm font-medium">Hệ thống</span>
+              </button>
             </div>
           </motion.div>
 
