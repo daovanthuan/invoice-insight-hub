@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { format } from 'date-fns';
+import { useState, useMemo } from 'react';
+import { format, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { motion } from 'framer-motion';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
@@ -10,6 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Table,
   TableBody,
@@ -41,7 +43,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Search, Filter, Eye, Download, FileText, Loader2, Pencil, Ban } from 'lucide-react';
+import { Search, Filter, Eye, Download, FileText, Loader2, Pencil, Ban, CalendarIcon, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { InvoiceEditDialog } from '@/components/invoices/InvoiceEditDialog';
 import { supabase } from '@/integrations/supabase/client';
@@ -73,10 +75,45 @@ export default function InvoicesPage() {
   const [loadingItems, setLoadingItems] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [currencyFilter, setCurrencyFilter] = useState<string>('all');
+  const [creatorFilter, setCreatorFilter] = useState<string>('all');
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
   const [editItems, setEditItems] = useState<InvoiceItem[]>([]);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+
+  // Get unique currencies and creators for filter options
+  const currencies = useMemo(() => {
+    const currencySet = new Set<string>();
+    invoices.forEach((inv) => {
+      if (inv.currency) currencySet.add(inv.currency);
+    });
+    return Array.from(currencySet).sort();
+  }, [invoices]);
+
+  const creators = useMemo(() => {
+    const creatorMap = new Map<string, string>();
+    invoices.forEach((inv) => {
+      if (inv.created_by && inv.created_by_profile?.user_code) {
+        creatorMap.set(inv.created_by, inv.created_by_profile.user_code);
+      }
+    });
+    return Array.from(creatorMap.entries()).map(([id, code]) => ({ id, code }));
+  }, [invoices]);
+
+  const clearAllFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('all');
+    setCurrencyFilter('all');
+    setCreatorFilter('all');
+    setDateFrom(undefined);
+    setDateTo(undefined);
+  };
+
+  const hasActiveFilters = searchTerm || statusFilter !== 'all' || currencyFilter !== 'all' || 
+    creatorFilter !== 'all' || dateFrom || dateTo;
 
   const handleCancelInvoice = async () => {
     if (!cancelId) return;
@@ -99,11 +136,34 @@ export default function InvoicesPage() {
   const filteredInvoices = invoices.filter((invoice) => {
     const matchesSearch =
       (invoice.invoice_number?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (invoice.vendor_name?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+      (invoice.vendor_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (invoice.buyer_name?.toLowerCase() || '').includes(searchTerm.toLowerCase());
 
     const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
+    const matchesCurrency = currencyFilter === 'all' || invoice.currency === currencyFilter;
+    const matchesCreator = creatorFilter === 'all' || invoice.created_by === creatorFilter;
 
-    return matchesSearch && matchesStatus;
+    // Date range filter (based on created_at)
+    let matchesDate = true;
+    if (dateFrom || dateTo) {
+      const invoiceDate = invoice.created_at ? new Date(invoice.created_at) : null;
+      if (invoiceDate) {
+        if (dateFrom && dateTo) {
+          matchesDate = isWithinInterval(invoiceDate, {
+            start: startOfDay(dateFrom),
+            end: endOfDay(dateTo),
+          });
+        } else if (dateFrom) {
+          matchesDate = invoiceDate >= startOfDay(dateFrom);
+        } else if (dateTo) {
+          matchesDate = invoiceDate <= endOfDay(dateTo);
+        }
+      } else {
+        matchesDate = false;
+      }
+    }
+
+    return matchesSearch && matchesStatus && matchesCurrency && matchesCreator && matchesDate;
   });
 
   const handleViewInvoice = async (invoice: Invoice) => {
@@ -197,38 +257,133 @@ export default function InvoicesPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 flex flex-wrap items-center gap-4"
+          className="mb-6 space-y-4"
         >
-          <div className="relative flex-1 min-w-[200px] max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Tìm theo mã hóa đơn, nhà cung cấp..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 bg-muted/50"
-            />
+          {/* Row 1: Search and main filters */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[200px] max-w-md">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder="Tìm theo mã HĐ, nhà cung cấp, người mua..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 bg-muted/50"
+              />
+            </div>
+
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[150px] bg-muted/50">
+                <Filter className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Trạng thái" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả TT</SelectItem>
+                <SelectItem value="processed">Đã xử lý</SelectItem>
+                <SelectItem value="approved">Đã duyệt</SelectItem>
+                <SelectItem value="pending">Đang chờ</SelectItem>
+                <SelectItem value="draft">Nháp</SelectItem>
+                <SelectItem value="rejected">Từ chối</SelectItem>
+                <SelectItem value="cancelled">Đã hủy</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={currencyFilter} onValueChange={setCurrencyFilter}>
+              <SelectTrigger className="w-[130px] bg-muted/50">
+                <SelectValue placeholder="Loại tiền" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả tiền</SelectItem>
+                {currencies.map((currency) => (
+                  <SelectItem key={currency} value={currency}>
+                    {currency}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={creatorFilter} onValueChange={setCreatorFilter}>
+              <SelectTrigger className="w-[150px] bg-muted/50">
+                <SelectValue placeholder="Người tạo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả NV</SelectItem>
+                {creators.map((creator) => (
+                  <SelectItem key={creator.id} value={creator.id}>
+                    {creator.code}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px] bg-muted/50">
-              <Filter className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="Lọc theo trạng thái" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả</SelectItem>
-              <SelectItem value="processed">Đã xử lý</SelectItem>
-              <SelectItem value="approved">Đã duyệt</SelectItem>
-              <SelectItem value="pending">Đang chờ</SelectItem>
-              <SelectItem value="draft">Nháp</SelectItem>
-              <SelectItem value="rejected">Từ chối</SelectItem>
-              <SelectItem value="cancelled">Đã hủy</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Row 2: Date filters and actions */}
+          <div className="flex flex-wrap items-center gap-3">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-[160px] justify-start text-left font-normal bg-muted/50",
+                    !dateFrom && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateFrom ? format(dateFrom, "dd/MM/yyyy") : "Từ ngày"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateFrom}
+                  onSelect={setDateFrom}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
 
-          <Button className="gap-2" onClick={exportCSV} disabled={filteredInvoices.length === 0}>
-            <Download className="h-4 w-4" />
-            Xuất CSV
-          </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-[160px] justify-start text-left font-normal bg-muted/50",
+                    !dateTo && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateTo ? format(dateTo, "dd/MM/yyyy") : "Đến ngày"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={dateTo}
+                  onSelect={setDateTo}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={clearAllFilters} className="gap-1 text-muted-foreground">
+                <X className="h-4 w-4" />
+                Xóa bộ lọc
+              </Button>
+            )}
+
+            <div className="flex-1" />
+
+            <span className="text-sm text-muted-foreground">
+              {filteredInvoices.length} / {invoices.length} hóa đơn
+            </span>
+
+            <Button className="gap-2" onClick={exportCSV} disabled={filteredInvoices.length === 0}>
+              <Download className="h-4 w-4" />
+              Xuất CSV
+            </Button>
+          </div>
         </motion.div>
 
         {/* Table */}
