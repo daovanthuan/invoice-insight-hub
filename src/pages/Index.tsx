@@ -8,6 +8,7 @@ import { TopVendorsChart } from '@/components/dashboard/TopVendorsChart';
 import { RecentInvoices } from '@/components/dashboard/RecentInvoices';
 import { useInvoices } from '@/hooks/useInvoices';
 import { Skeleton } from '@/components/ui/skeleton';
+import { normalizeCurrency, formatCurrencyCompact } from '@/lib/currency';
 import {
   FileText,
   DollarSign,
@@ -15,27 +16,15 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
-// Helper function to format currency
-const formatCurrency = (amount: number): string => {
-  if (amount >= 1_000_000_000) {
-    return `${(amount / 1_000_000_000).toFixed(1)}B`;
-  } else if (amount >= 1_000_000) {
-    return `${(amount / 1_000_000).toFixed(1)}M`;
-  } else if (amount >= 1_000) {
-    return `${(amount / 1_000).toFixed(1)}K`;
-  }
-  return amount.toLocaleString('vi-VN', { maximumFractionDigits: 0 });
-};
-
 const Index = () => {
   const { invoices, loading } = useInvoices();
 
   const stats = useMemo(() => {
     const totalInvoices = invoices.length;
     
-    // Group totals by currency
+    // Group totals by normalized currency
     const totalsByCurrency = invoices.reduce((acc: Record<string, number>, inv) => {
-      const currency = inv.currency || 'VND';
+      const currency = normalizeCurrency(inv.currency);
       acc[currency] = (acc[currency] || 0) + (inv.total_amount || 0);
       return acc;
     }, {});
@@ -44,9 +33,9 @@ const Index = () => {
     const processedInvoices = invoices.filter((inv) => inv.status === 'processed').length;
     const rejectedInvoices = invoices.filter((inv) => inv.status === 'rejected').length;
 
-    // Calculate average per currency
+    // Calculate average per normalized currency
     const invoicesByCurrency = invoices.reduce((acc: Record<string, number>, inv) => {
-      const currency = inv.currency || 'VND';
+      const currency = normalizeCurrency(inv.currency);
       acc[currency] = (acc[currency] || 0) + 1;
       return acc;
     }, {});
@@ -118,14 +107,26 @@ const Index = () => {
     };
   }, [invoices]);
 
-  // Format multi-currency totals for display
+  // Format multi-currency totals for display (compact, max 3 shown)
   const formatMultiCurrency = (totals: Record<string, number>) => {
-    const entries = Object.entries(totals).filter(([_, amount]) => amount > 0);
+    const entries = Object.entries(totals)
+      .filter(([_, amount]) => amount > 0)
+      .sort(([, a], [, b]) => b - a); // Sort by amount descending
+    
     if (entries.length === 0) return '0';
     
-    return entries
-      .map(([currency, amount]) => `${formatCurrency(amount)} ${currency}`)
+    const displayEntries = entries.slice(0, 3);
+    const remaining = entries.length - 3;
+    
+    let result = displayEntries
+      .map(([currency, amount]) => formatCurrencyCompact(amount, currency))
       .join(' | ');
+    
+    if (remaining > 0) {
+      result += ` (+${remaining})`;
+    }
+    
+    return result;
   };
 
   const formatMultiCurrencyAverage = (averages: Record<string, number>) => {

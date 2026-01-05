@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { normalizeCurrency } from '@/lib/currency';
 import {
   FileText,
   Upload,
@@ -28,9 +29,9 @@ const UserDashboard = () => {
     // Chỉ tính chi tiêu từ hóa đơn không bị từ chối
     const validInvoices = invoices.filter((inv) => inv.status !== 'rejected');
     
-    // Group totals by currency
+    // Group totals by normalized currency
     const totalsByCurrency = validInvoices.reduce((acc: Record<string, number>, inv) => {
-      const currency = inv.currency || 'VND';
+      const currency = normalizeCurrency(inv.currency);
       acc[currency] = (acc[currency] || 0) + (inv.total_amount || 0);
       return acc;
     }, {});
@@ -46,7 +47,7 @@ const UserDashboard = () => {
         return invDate.getMonth() === currentMonth && invDate.getFullYear() === currentYear;
       })
       .reduce((acc: Record<string, number>, inv) => {
-        const currency = inv.currency || 'VND';
+        const currency = normalizeCurrency(inv.currency);
         acc[currency] = (acc[currency] || 0) + (inv.total_amount || 0);
         return acc;
       }, {});
@@ -59,7 +60,7 @@ const UserDashboard = () => {
         return invDate.getMonth() === lastMonth && invDate.getFullYear() === lastMonthYear;
       })
       .reduce((acc: Record<string, number>, inv) => {
-        const currency = inv.currency || 'VND';
+        const currency = normalizeCurrency(inv.currency);
         acc[currency] = (acc[currency] || 0) + (inv.total_amount || 0);
         return acc;
       }, {});
