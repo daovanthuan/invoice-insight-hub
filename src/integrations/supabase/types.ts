@@ -14,219 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      access_logs: {
-        Row: {
-          action: string
-          api_endpoint: string | null
-          created_at: string
-          device_info: Json | null
-          function_name: string | null
-          http_method: string | null
-          id: string
-          ip_address: unknown
-          request_body: Json | null
-          resource: string | null
-          response_message: string | null
-          response_status: number | null
-          user_agent: string | null
-          user_id: string | null
-          username: string | null
-        }
-        Insert: {
-          action: string
-          api_endpoint?: string | null
-          created_at?: string
-          device_info?: Json | null
-          function_name?: string | null
-          http_method?: string | null
-          id?: string
-          ip_address?: unknown
-          request_body?: Json | null
-          resource?: string | null
-          response_message?: string | null
-          response_status?: number | null
-          user_agent?: string | null
-          user_id?: string | null
-          username?: string | null
-        }
-        Update: {
-          action?: string
-          api_endpoint?: string | null
-          created_at?: string
-          device_info?: Json | null
-          function_name?: string | null
-          http_method?: string | null
-          id?: string
-          ip_address?: unknown
-          request_body?: Json | null
-          resource?: string | null
-          response_message?: string | null
-          response_status?: number | null
-          user_agent?: string | null
-          user_id?: string | null
-          username?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "access_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      files: {
-        Row: {
-          confidence_score: number | null
-          created_at: string
-          created_by: string | null
-          description: string | null
-          description_final: string | null
-          file_path: string
-          file_size: number | null
-          file_type: string
-          folder_id: string | null
-          id: string
-          name: string
-          owner_id: string | null
-          status: Database["public"]["Enums"]["file_status"]
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          confidence_score?: number | null
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          description_final?: string | null
-          file_path: string
-          file_size?: number | null
-          file_type: string
-          folder_id?: string | null
-          id?: string
-          name: string
-          owner_id?: string | null
-          status?: Database["public"]["Enums"]["file_status"]
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          confidence_score?: number | null
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          description_final?: string | null
-          file_path?: string
-          file_size?: number | null
-          file_type?: string
-          folder_id?: string | null
-          id?: string
-          name?: string
-          owner_id?: string | null
-          status?: Database["public"]["Enums"]["file_status"]
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "files_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "files_folder_id_fkey"
-            columns: ["folder_id"]
-            isOneToOne: false
-            referencedRelation: "folders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "files_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "files_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      folders: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          description: string | null
-          id: string
-          name: string
-          owner_id: string | null
-          parent_id: string | null
-          status: Database["public"]["Enums"]["entity_status"]
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          name: string
-          owner_id?: string | null
-          parent_id?: string | null
-          status?: Database["public"]["Enums"]["entity_status"]
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          name?: string
-          owner_id?: string | null
-          parent_id?: string | null
-          status?: Database["public"]["Enums"]["entity_status"]
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "folders_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "folders_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "folders_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "folders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "folders_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       invoice_items: {
         Row: {
           amount: number | null
@@ -293,8 +80,6 @@ export type Database = {
           currency: string | null
           exchange_rate: number | null
           extend: Json | null
-          file_id: string | null
-          folder_id: string | null
           id: string
           invoice_date: string | null
           invoice_number: string | null
@@ -332,8 +117,6 @@ export type Database = {
           currency?: string | null
           exchange_rate?: number | null
           extend?: Json | null
-          file_id?: string | null
-          folder_id?: string | null
           id?: string
           invoice_date?: string | null
           invoice_number?: string | null
@@ -371,8 +154,6 @@ export type Database = {
           currency?: string | null
           exchange_rate?: number | null
           extend?: Json | null
-          file_id?: string | null
-          folder_id?: string | null
           id?: string
           invoice_date?: string | null
           invoice_number?: string | null
@@ -404,20 +185,6 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoices_file_id_fkey"
-            columns: ["file_id"]
-            isOneToOne: false
-            referencedRelation: "files"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoices_folder_id_fkey"
-            columns: ["folder_id"]
-            isOneToOne: false
-            referencedRelation: "folders"
             referencedColumns: ["id"]
           },
           {
@@ -480,57 +247,6 @@ export type Database = {
           },
         ]
       }
-      permissions: {
-        Row: {
-          action: string
-          created_at: string
-          created_by: string | null
-          description: string | null
-          id: string
-          resource: string
-          status: Database["public"]["Enums"]["entity_status"]
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          action: string
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          resource: string
-          status?: Database["public"]["Enums"]["entity_status"]
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          action?: string
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          resource?: string
-          status?: Database["public"]["Enums"]["entity_status"]
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "permissions_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "permissions_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       profiles: {
         Row: {
           address: string | null
@@ -587,42 +303,6 @@ export type Database = {
           },
         ]
       }
-      role_permissions: {
-        Row: {
-          created_at: string
-          id: string
-          permission_id: string
-          role_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          permission_id: string
-          role_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          permission_id?: string
-          role_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "role_permissions_permission_id_fkey"
-            columns: ["permission_id"]
-            isOneToOne: false
-            referencedRelation: "permissions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "role_permissions_role_id_fkey"
-            columns: ["role_id"]
-            isOneToOne: false
-            referencedRelation: "roles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       roles: {
         Row: {
           created_at: string
@@ -667,57 +347,6 @@ export type Database = {
           },
           {
             foreignKeyName: "roles_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      system_configs: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          description: string | null
-          id: string
-          is_public: boolean
-          key: string
-          updated_at: string
-          updated_by: string | null
-          value: Json
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          is_public?: boolean
-          key: string
-          updated_at?: string
-          updated_by?: string | null
-          value: Json
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          is_public?: boolean
-          key?: string
-          updated_at?: string
-          updated_by?: string | null
-          value?: Json
-        }
-        Relationships: [
-          {
-            foreignKeyName: "system_configs_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "system_configs_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
