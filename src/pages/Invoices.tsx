@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
 import { useInvoices } from '@/hooks/useInvoices';
+import { useUserRole } from '@/hooks/useUserRole';
 import { useCreateNotification } from '@/hooks/useCreateNotification';
 import { Invoice, InvoiceItem } from '@/types/database';
 import { Badge } from '@/components/ui/badge';
@@ -69,6 +70,7 @@ const statusLabels: Record<string, string> = {
 
 export default function InvoicesPage() {
   const { invoices, loading, fetchInvoiceItems, updateInvoice, fetchInvoices } = useInvoices();
+  const { isAdmin } = useUserRole();
   const { createNotification } = useCreateNotification();
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
@@ -364,10 +366,14 @@ export default function InvoicesPage() {
                   <TableHead className="text-muted-foreground">Ngày HĐ</TableHead>
                   <TableHead className="text-muted-foreground">Tổng tiền</TableHead>
                   <TableHead className="text-muted-foreground">Trạng thái</TableHead>
-                  <TableHead className="text-muted-foreground">Người tạo</TableHead>
-                  <TableHead className="text-muted-foreground">Ngày tạo</TableHead>
-                  <TableHead className="text-muted-foreground">Người cập nhật</TableHead>
-                  <TableHead className="text-muted-foreground">Ngày cập nhật</TableHead>
+                  {isAdmin && (
+                    <>
+                      <TableHead className="text-muted-foreground">Người tạo</TableHead>
+                      <TableHead className="text-muted-foreground">Ngày tạo</TableHead>
+                      <TableHead className="text-muted-foreground">Người cập nhật</TableHead>
+                      <TableHead className="text-muted-foreground">Ngày cập nhật</TableHead>
+                    </>
+                  )}
                   <TableHead className="text-muted-foreground text-right">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
@@ -411,18 +417,22 @@ export default function InvoicesPage() {
                         {statusLabels[invoice.status] || invoice.status}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {invoice.created_by_profile?.user_code || '-'}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {createdAt ? format(createdAt, 'dd/MM/yyyy HH:mm') : '-'}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {isUpdated ? (invoice.updated_by_profile?.user_code || '-') : '-'}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {isUpdated ? format(updatedAt, 'dd/MM/yyyy HH:mm') : '-'}
-                    </TableCell>
+                    {isAdmin && (
+                      <>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {invoice.created_by_profile?.user_code || '-'}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {createdAt ? format(createdAt, 'dd/MM/yyyy HH:mm') : '-'}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {isUpdated ? (invoice.updated_by_profile?.user_code || '-') : '-'}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {isUpdated ? format(updatedAt, 'dd/MM/yyyy HH:mm') : '-'}
+                        </TableCell>
+                      </>
+                    )}
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button
