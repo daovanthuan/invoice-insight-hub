@@ -1,6 +1,5 @@
 // Database enums
 export type EntityStatus = 'active' | 'inactive' | 'deleted';
-export type FileStatus = 'pending' | 'processing' | 'completed' | 'error';
 export type InvoiceStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'processed' | 'cancelled';
 export type GenderType = 'male' | 'female' | 'other';
 export type NotificationType = 'info' | 'warning' | 'error' | 'success';
@@ -19,6 +18,7 @@ export interface Profile {
   status: EntityStatus;
   created_at: string;
   updated_at: string;
+  updated_by: string | null;
 }
 
 // Role
@@ -34,27 +34,6 @@ export interface Role {
   updated_at: string;
 }
 
-// Permission
-export interface Permission {
-  id: string;
-  action: string;
-  resource: string;
-  description: string | null;
-  status: EntityStatus;
-  created_by: string | null;
-  updated_by: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-// Role Permission
-export interface RolePermission {
-  id: string;
-  role_id: string;
-  permission_id: string;
-  created_at: string;
-}
-
 // User Role
 export interface UserRole {
   id: string;
@@ -62,39 +41,6 @@ export interface UserRole {
   role_id: string;
   created_at: string;
   role?: Role;
-}
-
-// Folder
-export interface Folder {
-  id: string;
-  name: string;
-  description: string | null;
-  parent_id: string | null;
-  owner_id: string | null;
-  status: EntityStatus;
-  created_by: string | null;
-  updated_by: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-// File
-export interface FileRecord {
-  id: string;
-  name: string;
-  file_path: string;
-  file_type: string;
-  file_size: number | null;
-  status: FileStatus;
-  description: string | null;
-  description_final: string | null;
-  confidence_score: number | null;
-  folder_id: string | null;
-  owner_id: string | null;
-  created_by: string | null;
-  updated_by: string | null;
-  created_at: string;
-  updated_at: string;
 }
 
 // Invoice
@@ -141,8 +87,6 @@ export interface Invoice {
   extend: Record<string, unknown> | null;
   
   // Relations
-  file_id: string | null;
-  folder_id: string | null;
   owner_id: string | null;
   created_by: string | null;
   updated_by: string | null;
@@ -164,38 +108,6 @@ export interface InvoiceItem {
   tax_amount: number | null;
   sort_order: number;
   created_at: string;
-}
-
-// Access Log
-export interface AccessLog {
-  id: string;
-  user_id: string | null;
-  username: string | null;
-  action: string;
-  resource: string | null;
-  api_endpoint: string | null;
-  http_method: string | null;
-  function_name: string | null;
-  ip_address: string | null;
-  user_agent: string | null;
-  device_info: Record<string, unknown> | null;
-  request_body: Record<string, unknown> | null;
-  response_status: number | null;
-  response_message: string | null;
-  created_at: string;
-}
-
-// System Config
-export interface SystemConfig {
-  id: string;
-  key: string;
-  value: unknown;
-  description: string | null;
-  is_public: boolean;
-  created_by: string | null;
-  updated_by: string | null;
-  created_at: string;
-  updated_at: string;
 }
 
 // Notification
