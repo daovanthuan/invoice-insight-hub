@@ -22,8 +22,13 @@ const Index = () => {
   const stats = useMemo(() => {
     const totalInvoices = invoices.length;
     
-    // Group totals by normalized currency
-    const totalsByCurrency = invoices.reduce((acc: Record<string, number>, inv) => {
+    // Chỉ tính hóa đơn hợp lệ (không bị hủy hoặc từ chối)
+    const validInvoices = invoices.filter(
+      (inv) => inv.status !== 'cancelled' && inv.status !== 'rejected'
+    );
+    
+    // Group totals by normalized currency (chỉ từ hóa đơn hợp lệ)
+    const totalsByCurrency = validInvoices.reduce((acc: Record<string, number>, inv) => {
       const currency = normalizeCurrency(inv.currency);
       acc[currency] = (acc[currency] || 0) + (inv.total_amount || 0);
       return acc;
@@ -32,9 +37,10 @@ const Index = () => {
     const pendingInvoices = invoices.filter((inv) => inv.status === 'pending').length;
     const processedInvoices = invoices.filter((inv) => inv.status === 'processed').length;
     const rejectedInvoices = invoices.filter((inv) => inv.status === 'rejected').length;
+    const cancelledInvoices = invoices.filter((inv) => inv.status === 'cancelled').length;
 
-    // Calculate average per normalized currency
-    const invoicesByCurrency = invoices.reduce((acc: Record<string, number>, inv) => {
+    // Calculate average per normalized currency (chỉ từ hóa đơn hợp lệ)
+    const invoicesByCurrency = validInvoices.reduce((acc: Record<string, number>, inv) => {
       const currency = normalizeCurrency(inv.currency);
       acc[currency] = (acc[currency] || 0) + 1;
       return acc;
