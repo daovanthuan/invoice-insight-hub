@@ -12,6 +12,9 @@ import {
   Upload,
   Clock,
   CheckCircle,
+  Wallet,
+  TrendingUp,
+  TrendingDown,
 } from 'lucide-react';
 
 const UserDashboard = () => {
@@ -24,16 +27,47 @@ const UserDashboard = () => {
     const pendingInvoices = invoices.filter((inv) => inv.status === 'pending').length;
     const rejectedInvoices = invoices.filter((inv) => inv.status === 'rejected').length;
     
-    const totalAmount = invoices.reduce((sum, inv) => {
+    // Chỉ tính chi tiêu từ hóa đơn không bị từ chối
+    const validInvoices = invoices.filter((inv) => inv.status !== 'rejected');
+    
+    const totalSpending = validInvoices.reduce((sum, inv) => {
       return sum + (inv.total_amount || 0);
     }, 0);
+
+    // Tính chi tiêu tháng này và tháng trước
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    const thisMonthSpending = validInvoices
+      .filter((inv) => {
+        const invDate = inv.invoice_date ? new Date(inv.invoice_date) : new Date(inv.created_at);
+        return invDate.getMonth() === currentMonth && invDate.getFullYear() === currentYear;
+      })
+      .reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+
+    const lastMonthSpending = validInvoices
+      .filter((inv) => {
+        const invDate = inv.invoice_date ? new Date(inv.invoice_date) : new Date(inv.created_at);
+        const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+        const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+        return invDate.getMonth() === lastMonth && invDate.getFullYear() === lastMonthYear;
+      })
+      .reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+
+    const spendingChange = lastMonthSpending > 0 
+      ? ((thisMonthSpending - lastMonthSpending) / lastMonthSpending) * 100 
+      : 0;
 
     return {
       totalInvoices,
       processedInvoices,
       pendingInvoices,
       rejectedInvoices,
-      totalAmount,
+      totalSpending,
+      thisMonthSpending,
+      lastMonthSpending,
+      spendingChange,
     };
   }, [invoices]);
 
@@ -71,7 +105,61 @@ const UserDashboard = () => {
           </Button>
         </div>
 
-        {/* Stats Cards */}
+        {/* Spending Stats */}
+        <div className="mb-6 grid gap-4 md:grid-cols-2">
+          <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Tổng chi tiêu
+              </CardTitle>
+              <Wallet className="h-5 w-5 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-primary">
+                {stats.totalSpending.toLocaleString('vi-VN')} ₫
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Từ {stats.totalInvoices - stats.rejectedInvoices} hóa đơn hợp lệ
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                Chi tiêu tháng này
+              </CardTitle>
+              {stats.spendingChange >= 0 ? (
+                <TrendingUp className="h-5 w-5 text-destructive" />
+              ) : (
+                <TrendingDown className="h-5 w-5 text-success" />
+              )}
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {stats.thisMonthSpending.toLocaleString('vi-VN')} ₫
+              </div>
+              <div className="flex items-center gap-1 mt-1">
+                {stats.lastMonthSpending > 0 ? (
+                  <>
+                    <span className={`text-xs font-medium ${stats.spendingChange >= 0 ? 'text-destructive' : 'text-success'}`}>
+                      {stats.spendingChange >= 0 ? '+' : ''}{stats.spendingChange.toFixed(1)}%
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      so với tháng trước
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    Tháng trước: {stats.lastMonthSpending.toLocaleString('vi-VN')} ₫
+                  </span>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Invoice Stats Cards */}
         <div className="mb-8 grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
