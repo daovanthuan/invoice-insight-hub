@@ -50,7 +50,11 @@ export const useInvoices = () => {
     try {
       const { data, error } = await supabase
         .from("invoices")
-        .select("*")
+        .select(`
+          *,
+          created_by_profile:profiles!invoices_created_by_fkey(full_name),
+          updated_by_profile:profiles!invoices_updated_by_fkey(full_name)
+        `)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
