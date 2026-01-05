@@ -308,10 +308,10 @@ export default function InvoicesPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {invoice.created_by_profile?.full_name || '-'}
+                      {invoice.created_by_profile?.user_code || '-'}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {isUpdated ? (invoice.updated_by_profile?.full_name || '-') : '-'}
+                      {isUpdated ? (invoice.updated_by_profile?.user_code || '-') : '-'}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
