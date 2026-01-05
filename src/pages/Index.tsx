@@ -33,15 +33,28 @@ const Index = () => {
   const stats = useMemo(() => {
     const totalInvoices = invoices.length;
     
-    const totalAmount = invoices.reduce((sum, inv) => {
-      return sum + (inv.total_amount || 0);
-    }, 0);
+    // Group totals by currency
+    const totalsByCurrency = invoices.reduce((acc: Record<string, number>, inv) => {
+      const currency = inv.currency || 'VND';
+      acc[currency] = (acc[currency] || 0) + (inv.total_amount || 0);
+      return acc;
+    }, {});
 
     const pendingInvoices = invoices.filter((inv) => inv.status === 'pending').length;
     const processedInvoices = invoices.filter((inv) => inv.status === 'processed').length;
     const rejectedInvoices = invoices.filter((inv) => inv.status === 'rejected').length;
 
-    const averageAmount = totalInvoices > 0 ? totalAmount / totalInvoices : 0;
+    // Calculate average per currency
+    const invoicesByCurrency = invoices.reduce((acc: Record<string, number>, inv) => {
+      const currency = inv.currency || 'VND';
+      acc[currency] = (acc[currency] || 0) + 1;
+      return acc;
+    }, {});
+
+    const averageByCurrency: Record<string, number> = {};
+    Object.keys(totalsByCurrency).forEach((currency) => {
+      averageByCurrency[currency] = totalsByCurrency[currency] / (invoicesByCurrency[currency] || 1);
+    });
 
     // Group by month for chart
     const monthlyData = invoices.reduce((acc: any[], inv) => {
@@ -96,14 +109,36 @@ const Index = () => {
 
     return {
       totalInvoices,
-      totalAmount,
+      totalsByCurrency,
+      averageByCurrency,
       pendingInvoices,
-      averageAmount,
       monthlyData: monthlyData.slice(-6),
       topVendors,
       statusDistribution,
     };
   }, [invoices]);
+
+  // Format multi-currency totals for display
+  const formatMultiCurrency = (totals: Record<string, number>) => {
+    const entries = Object.entries(totals).filter(([_, amount]) => amount > 0);
+    if (entries.length === 0) return '0';
+    
+    return entries
+      .map(([currency, amount]) => `${formatCurrency(amount)} ${currency}`)
+      .join(' | ');
+  };
+
+  const formatMultiCurrencyAverage = (averages: Record<string, number>) => {
+    const entries = Object.entries(averages).filter(([_, amount]) => amount > 0);
+    if (entries.length === 0) return '0';
+    
+    if (entries.length === 1) {
+      return `${entries[0][1].toLocaleString('vi-VN', { maximumFractionDigits: 0 })} ${entries[0][0]}`;
+    }
+    
+    // If multiple currencies, just show count
+    return `${entries.length} loại tiền`;
+  };
 
   // Convert for RecentInvoices component
   const recentInvoicesFormatted = invoices.slice(0, 5).map((inv) => ({
@@ -180,8 +215,8 @@ const Index = () => {
           />
           <StatCard
             title="Tổng giá trị"
-            value={formatCurrency(stats.totalAmount)}
-            change="Tổng số tiền"
+            value={formatMultiCurrency(stats.totalsByCurrency)}
+            change="Theo từng loại tiền"
             changeType="positive"
             icon={DollarSign}
             iconColor="text-success"
@@ -198,7 +233,7 @@ const Index = () => {
           />
           <StatCard
             title="Giá trị TB"
-            value={stats.averageAmount.toLocaleString('vi-VN', { maximumFractionDigits: 0 })}
+            value={formatMultiCurrencyAverage(stats.averageByCurrency)}
             change="Mỗi hóa đơn"
             changeType="neutral"
             icon={TrendingUp}
