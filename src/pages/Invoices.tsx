@@ -262,8 +262,8 @@ export default function InvoicesPage() {
                   <TableHead className="text-muted-foreground">Ngày HĐ</TableHead>
                   <TableHead className="text-muted-foreground">Tổng tiền</TableHead>
                   <TableHead className="text-muted-foreground">Trạng thái</TableHead>
-                  <TableHead className="text-muted-foreground">Ngày tạo</TableHead>
-                  <TableHead className="text-muted-foreground">Cập nhật</TableHead>
+                  <TableHead className="text-muted-foreground">Người tạo</TableHead>
+                  <TableHead className="text-muted-foreground">Người cập nhật</TableHead>
                   <TableHead className="text-muted-foreground text-right">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
@@ -308,10 +308,10 @@ export default function InvoicesPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {createdAt ? format(createdAt, 'dd/MM/yyyy HH:mm') : 'N/A'}
+                      {invoice.created_by_profile?.full_name || '-'}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {isUpdated ? format(updatedAt, 'dd/MM/yyyy HH:mm') : '-'}
+                      {isUpdated ? (invoice.updated_by_profile?.full_name || '-') : '-'}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">

@@ -92,6 +92,10 @@ export interface Invoice {
   updated_by: string | null;
   created_at: string;
   updated_at: string;
+
+  // Joined profiles
+  created_by_profile?: { full_name: string | null } | null;
+  updated_by_profile?: { full_name: string | null } | null;
 }
 
 // Invoice Item
