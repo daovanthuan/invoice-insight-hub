@@ -91,11 +91,27 @@ export default function UploadPage() {
       // Save to database
       const core = extractedData.core;
       
-      // Calculate subtotal from line items (sum of all amounts)
+      // Process line items - tính thành tiền = đơn giá × số lượng (chưa thuế)
       const lineItems = core.line_items || [];
-      const calculatedSubtotal = lineItems.reduce((sum, item) => {
-        const amount = parseNumber(item.amount);
-        return sum + (amount || 0);
+      const processedLineItems = lineItems.map((item) => {
+        const quantity = parseNumber(item.quantity);
+        const unitPrice = parseNumber(item.unit_price);
+        // Tính thành tiền = số lượng × đơn giá (chưa thuế)
+        const calculatedAmount = (quantity && unitPrice) ? quantity * unitPrice : null;
+        return {
+          item_code: item.item_code || null,
+          description: item.description || null,
+          unit: item.unit || null,
+          quantity: quantity,
+          unit_price: unitPrice,
+          // Sử dụng thành tiền tính từ đơn giá × số lượng (chưa thuế)
+          amount: calculatedAmount,
+        };
+      });
+      
+      // Tính subtotal = tổng thành tiền các item (chưa thuế)
+      const calculatedSubtotal = processedLineItems.reduce((sum, item) => {
+        return sum + (item.amount || 0);
       }, 0);
       
       // Use calculated subtotal if valid, otherwise fallback to AI-extracted value
@@ -133,14 +149,7 @@ export default function UploadPage() {
             ? extractedData.extend as Record<string, unknown> 
             : null,
         },
-        lineItems.map((item) => ({
-          item_code: item.item_code || null,
-          description: item.description || null,
-          unit: item.unit || null,
-          quantity: parseNumber(item.quantity),
-          unit_price: parseNumber(item.unit_price),
-          amount: parseNumber(item.amount),
-        }))
+        processedLineItems
       );
 
       if (invoice) {
