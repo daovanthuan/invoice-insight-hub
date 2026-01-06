@@ -47,7 +47,42 @@ export default function UploadPage() {
 
   const parseNumber = (value: string | undefined | null): number | null => {
     if (!value) return null;
-    const cleaned = value.replace(/[^0-9.-]/g, '');
+    
+    // Trim whitespace
+    let cleaned = value.trim();
+    
+    // Detect Vietnamese format: dots as thousands separator, comma as decimal
+    // Examples: "6.204,19" -> 6204.19, "1.234.567,89" -> 1234567.89
+    // Or "6.204" (no decimal) -> 6204
+    const vietnameseFormat = /^\d{1,3}(\.\d{3})*(,\d+)?$/.test(cleaned);
+    
+    // Detect standard format: commas as thousands separator, dot as decimal
+    // Examples: "6,204.19" -> 6204.19, "1,234,567.89" -> 1234567.89
+    const standardFormat = /^\d{1,3}(,\d{3})*(\.\d+)?$/.test(cleaned);
+    
+    if (vietnameseFormat) {
+      // Vietnamese format: remove dots (thousands), replace comma with dot (decimal)
+      cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+    } else if (standardFormat) {
+      // Standard format: just remove commas (thousands separator)
+      cleaned = cleaned.replace(/,/g, '');
+    } else {
+      // Fallback: try to detect which separator is decimal based on position
+      const lastDot = cleaned.lastIndexOf('.');
+      const lastComma = cleaned.lastIndexOf(',');
+      
+      if (lastComma > lastDot && lastComma > 0) {
+        // Comma is likely the decimal separator (Vietnamese)
+        cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+      } else if (lastDot > lastComma && lastDot > 0) {
+        // Dot is likely the decimal separator (standard)
+        cleaned = cleaned.replace(/,/g, '');
+      } else {
+        // No clear pattern, just remove non-numeric except dots
+        cleaned = cleaned.replace(/[^0-9.-]/g, '');
+      }
+    }
+    
     const parsed = parseFloat(cleaned);
     return isNaN(parsed) ? null : parsed;
   };
