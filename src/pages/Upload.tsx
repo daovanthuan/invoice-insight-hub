@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import JSZip from 'jszip';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import {
   CheckCircle2,
   Loader2,
   AlertCircle,
+  Archive,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useInvoiceExtraction } from '@/hooks/useInvoiceExtraction';
@@ -211,53 +213,126 @@ export default function UploadPage() {
     'application/pdf'
   ];
 
+  const isZipFile = (file: File): boolean => {
+    return file.type === 'application/zip' || 
+           file.type === 'application/x-zip-compressed' ||
+           file.name.toLowerCase().endsWith('.zip');
+  };
+
+  const extractFilesFromZip = async (zipFile: File): Promise<File[]> => {
+    const extractedFiles: File[] = [];
+    
+    try {
+      const zip = await JSZip.loadAsync(zipFile);
+      const filePromises: Promise<void>[] = [];
+      
+      zip.forEach((relativePath, zipEntry) => {
+        // Bỏ qua thư mục và file ẩn (bắt đầu bằng . hoặc trong thư mục __MACOSX)
+        if (zipEntry.dir || relativePath.startsWith('__MACOSX') || relativePath.startsWith('.')) {
+          return;
+        }
+        
+        // Lấy extension của file
+        const ext = relativePath.toLowerCase().split('.').pop();
+        const validExtensions = ['png', 'jpg', 'jpeg', 'webp', 'pdf'];
+        
+        if (ext && validExtensions.includes(ext)) {
+          const promise = zipEntry.async('blob').then((blob) => {
+            // Xác định MIME type
+            let mimeType = 'application/octet-stream';
+            if (ext === 'png') mimeType = 'image/png';
+            else if (ext === 'jpg' || ext === 'jpeg') mimeType = 'image/jpeg';
+            else if (ext === 'webp') mimeType = 'image/webp';
+            else if (ext === 'pdf') mimeType = 'application/pdf';
+            
+            // Lấy tên file từ path
+            const fileName = relativePath.split('/').pop() || relativePath;
+            
+            const file = new File([blob], fileName, { type: mimeType });
+            extractedFiles.push(file);
+          });
+          filePromises.push(promise);
+        }
+      });
+      
+      await Promise.all(filePromises);
+      return extractedFiles;
+    } catch (error) {
+      console.error('Error extracting ZIP:', error);
+      toast.error(`Lỗi giải nén file ZIP: ${zipFile.name}`);
+      return [];
+    }
+  };
+
+  const processUploadedFiles = async (inputFiles: File[]) => {
+    const filesToProcess: File[] = [];
+    const zipFiles: File[] = [];
+    
+    // Phân loại file ZIP và file thường
+    for (const file of inputFiles) {
+      if (isZipFile(file)) {
+        zipFiles.push(file);
+      } else if (validFileTypes.includes(file.type)) {
+        filesToProcess.push(file);
+      }
+    }
+    
+    // Giải nén các file ZIP
+    if (zipFiles.length > 0) {
+      toast.info(`Đang giải nén ${zipFiles.length} file ZIP...`);
+      
+      const extractPromises = zipFiles.map(extractFilesFromZip);
+      const extractedFilesArrays = await Promise.all(extractPromises);
+      
+      for (const extractedFiles of extractedFilesArrays) {
+        filesToProcess.push(...extractedFiles);
+      }
+      
+      if (filesToProcess.length > 0) {
+        toast.success(`Đã giải nén ${filesToProcess.length} file hóa đơn từ ZIP`);
+      }
+    }
+    
+    if (filesToProcess.length === 0) {
+      toast.error('Không tìm thấy file hóa đơn hợp lệ (PNG, JPG, WEBP, PDF)');
+      return;
+    }
+    
+    // Tạo UploadedFile objects
+    const newFiles: UploadedFile[] = filesToProcess.map((file) => ({
+      id: crypto.randomUUID(),
+      file,
+      status: 'uploading' as const,
+      progress: 0,
+    }));
+    
+    setFiles((prev) => [...prev, ...newFiles]);
+    
+    // Process all files concurrently
+    await Promise.all(newFiles.map((uploadedFile) => processFile(uploadedFile)));
+  };
+
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
 
-    const droppedFiles = Array.from(e.dataTransfer.files).filter((file) =>
-      validFileTypes.includes(file.type)
-    );
-
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    
     if (droppedFiles.length === 0) {
-      toast.error('Vui lòng upload file ảnh (PNG, JPG, WEBP) hoặc PDF');
       return;
     }
 
-    const newFiles: UploadedFile[] = droppedFiles.map((file) => ({
-      id: crypto.randomUUID(),
-      file,
-      status: 'uploading',
-      progress: 0,
-    }));
-
-    setFiles((prev) => [...prev, ...newFiles]);
-
-    // Process all files concurrently (parallel processing)
-    await Promise.all(newFiles.map((uploadedFile) => processFile(uploadedFile)));
+    await processUploadedFiles(droppedFiles);
   }, []);
 
   const handleFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(e.target.files || []).filter((file) =>
-      validFileTypes.includes(file.type)
-    );
+    const selectedFiles = Array.from(e.target.files || []);
 
     if (selectedFiles.length === 0) {
-      toast.error('Vui lòng upload file ảnh (PNG, JPG, WEBP) hoặc PDF');
       return;
     }
 
-    const newFiles: UploadedFile[] = selectedFiles.map((file) => ({
-      id: crypto.randomUUID(),
-      file,
-      status: 'uploading',
-      progress: 0,
-    }));
-
-    setFiles((prev) => [...prev, ...newFiles]);
-
-    // Process all files concurrently (parallel processing)
-    await Promise.all(newFiles.map((uploadedFile) => processFile(uploadedFile)));
+    await processUploadedFiles(selectedFiles);
 
     // Reset input
     e.target.value = '';
@@ -296,7 +371,7 @@ export default function UploadPage() {
 
   return (
     <MainLayout>
-      <Header title="Tải Lên Hóa Đơn" subtitle="Upload ảnh hoặc PDF hóa đơn để AI trích xuất dữ liệu" />
+      <Header title="Tải Lên Hóa Đơn" subtitle="Upload ảnh, PDF hoặc file ZIP chứa hóa đơn để AI trích xuất dữ liệu" />
 
       <div className="p-6">
         {/* Upload Zone */}
@@ -339,8 +414,12 @@ export default function UploadPage() {
                 {isDragging ? 'Thả file vào đây' : 'Kéo & thả hóa đơn'}
               </p>
               <p className="text-sm text-muted-foreground mb-4">
-                hoặc click để chọn file (PNG, JPG, WEBP, PDF)
+                hoặc click để chọn file (PNG, JPG, WEBP, PDF, ZIP)
               </p>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
+                <Archive className="h-4 w-4" />
+                <span>Hỗ trợ file ZIP chứa nhiều hóa đơn</span>
+              </div>
               <Button variant="outline" className="pointer-events-none">
                 Chọn File
               </Button>
@@ -349,7 +428,7 @@ export default function UploadPage() {
               id="file-upload"
               type="file"
               className="hidden"
-              accept="image/png,image/jpeg,image/jpg,image/webp,application/pdf"
+              accept="image/png,image/jpeg,image/jpg,image/webp,application/pdf,.zip,application/zip,application/x-zip-compressed"
               multiple
               onChange={handleFileInput}
               disabled={isExtracting}
