@@ -308,11 +308,14 @@ export default function UploadPage() {
     
     setFiles((prev) => [...prev, ...newFiles]);
     
-    // Process all files concurrently
-    await Promise.all(newFiles.map((uploadedFile) => processFile(uploadedFile)));
+    // Fire off all extractions concurrently - không await để không block
+    // Mỗi file sẽ tự cập nhật state khi hoàn thành
+    newFiles.forEach((uploadedFile) => {
+      processFile(uploadedFile);
+    });
   };
 
-  const handleDrop = useCallback(async (e: React.DragEvent) => {
+  const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
 
@@ -322,17 +325,17 @@ export default function UploadPage() {
       return;
     }
 
-    await processUploadedFiles(droppedFiles);
+    processUploadedFiles(droppedFiles);
   }, []);
 
-  const handleFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
 
     if (selectedFiles.length === 0) {
       return;
     }
 
-    await processUploadedFiles(selectedFiles);
+    processUploadedFiles(selectedFiles);
 
     // Reset input
     e.target.value = '';
