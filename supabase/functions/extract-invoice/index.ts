@@ -7,6 +7,24 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const VALIDATION_PROMPT = `You are an image classifier. Determine if the given image is an invoice or receipt document.
+
+An invoice/receipt typically contains:
+- Seller/vendor information (name, address, tax ID)
+- Buyer/customer information
+- List of items/services with prices
+- Total amount, tax information
+- Invoice number, date
+
+Respond with ONLY valid JSON:
+{
+  "is_invoice": true/false,
+  "confidence": 0.0-1.0,
+  "reason": "brief explanation"
+}
+
+If it's clearly NOT an invoice (e.g., a photo, screenshot of app, random document, ID card, etc.), set is_invoice to false.`;
+
 const SYSTEM_PROMPT = `You are a highly reliable invoice extraction AI. Your highest priority is accuracy.
 
 RULES FOR NUMERIC FIELDS:
@@ -126,7 +144,7 @@ serve(async (req) => {
 
     // Build user content based on file type
     const isPdf = mimeType === "application/pdf";
-    const userContent = isPdf
+    const buildUserContent = (promptText: string) => isPdf
       ? [
           {
             type: "file",
@@ -137,7 +155,7 @@ serve(async (req) => {
           },
           {
             type: "text",
-            text: "Extract all invoice data and return JSON only.",
+            text: promptText,
           },
         ]
       : [
@@ -149,12 +167,66 @@ serve(async (req) => {
           },
           {
             type: "text",
-            text: "Extract all invoice data and return JSON only.",
+            text: promptText,
           },
         ];
 
-    console.log("Sending request to AI gateway, isPdf:", isPdf, "mimeType:", mimeType);
+    console.log("Step 1: Validating if image is an invoice, isPdf:", isPdf, "mimeType:", mimeType);
 
+    // Step 1: Validate if the image is an invoice
+    const validationResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          { role: "system", content: VALIDATION_PROMPT },
+          {
+            role: "user",
+            content: buildUserContent("Is this an invoice or receipt? Respond with JSON only."),
+          },
+        ],
+      }),
+    });
+
+    if (!validationResponse.ok) {
+      console.error("Validation request failed:", validationResponse.status);
+      // Continue with extraction anyway if validation fails
+    } else {
+      const validationData = await validationResponse.json();
+      const validationContent = validationData?.choices?.[0]?.message?.content as string | undefined;
+      
+      if (validationContent) {
+        try {
+          const jsonMatch = validationContent.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const validation = JSON.parse(jsonMatch[0]);
+            console.log("Validation result:", validation);
+            
+            if (validation.is_invoice === false) {
+              return new Response(JSON.stringify({ 
+                success: false, 
+                error: `Hình ảnh không phải là hóa đơn: ${validation.reason || "Không xác định được nội dung hóa đơn"}`,
+                validation: validation
+              }), {
+                status: 400,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+              });
+            }
+          }
+        } catch (e) {
+          console.error("Failed to parse validation response:", e);
+          // Continue with extraction if validation parsing fails
+        }
+      }
+    }
+
+    console.log("Step 2: Extracting invoice data");
+
+    // Step 2: Extract invoice data
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -167,7 +239,7 @@ serve(async (req) => {
           { role: "system", content: SYSTEM_PROMPT },
           {
             role: "user",
-            content: userContent,
+            content: buildUserContent("Extract all invoice data and return JSON only."),
           },
         ],
       }),
