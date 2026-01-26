@@ -14,6 +14,9 @@ const COLORS = [
   'hsl(var(--success))',
   'hsl(var(--warning))',
   'hsl(var(--destructive))',
+  'hsl(var(--muted-foreground))',
+  'hsl(var(--primary))',
+  'hsl(var(--chart-2))',
 ];
 
 export function StatusPieChart({ data }: StatusPieChartProps) {
