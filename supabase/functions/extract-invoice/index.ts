@@ -275,12 +275,58 @@ serve(async (req) => {
     }
 
     let extractedData: unknown;
-    try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error("No JSON found");
-      extractedData = JSON.parse(jsonMatch[0]);
-    } catch (e) {
-      console.error("Failed to parse AI JSON", e);
+    const parseJsonFromAI = (text: string): unknown => {
+      // Strip markdown code fences if present
+      let cleaned = text.replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "");
+      // Try direct parse first
+      try { return JSON.parse(cleaned.trim()); } catch (_) { /* fall through */ }
+      // Try extracting JSON object with greedy match
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try { return JSON.parse(jsonMatch[0]); } catch (_) { /* fall through */ }
+      }
+      // Try fixing common issues: trailing commas
+      if (jsonMatch) {
+        const fixed = jsonMatch[0].replace(/,\s*([}\]])/g, "$1");
+        try { return JSON.parse(fixed); } catch (_) { /* fall through */ }
+      }
+      return null;
+    };
+
+    extractedData = parseJsonFromAI(content);
+
+    // Retry once if parsing failed
+    if (!extractedData) {
+      console.log("First parse failed, retrying extraction...");
+      const retryResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            {
+              role: "user",
+              content: buildUserContent("Extract all invoice data. Return ONLY a valid JSON object, no markdown, no extra text."),
+            },
+          ],
+        }),
+      });
+
+      if (retryResponse.ok) {
+        const retryData = await retryResponse.json();
+        const retryContent = retryData?.choices?.[0]?.message?.content as string | undefined;
+        if (retryContent) {
+          extractedData = parseJsonFromAI(retryContent);
+        }
+      }
+    }
+
+    if (!extractedData) {
+      console.error("Failed to parse AI JSON after retry. Raw content:", content.substring(0, 500));
       return new Response(JSON.stringify({ success: false, error: "Failed to parse AI response" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
