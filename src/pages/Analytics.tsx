@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { normalizeCurrency } from '@/lib/currency';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
 import { useInvoices } from '@/hooks/useInvoices';
@@ -119,7 +120,7 @@ export default function AnalyticsPage() {
 
     // Currency distribution
     const currencyMap = invoices.reduce((acc: Record<string, number>, inv) => {
-      const currency = inv.currency || 'VND';
+      const currency = normalizeCurrency(inv.currency);
       acc[currency] = (acc[currency] || 0) + 1;
       return acc;
     }, {});
