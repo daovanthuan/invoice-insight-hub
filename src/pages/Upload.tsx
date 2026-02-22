@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import JSZip from 'jszip';
@@ -67,15 +68,50 @@ export default function UploadPage() {
     return isNaN(parsed) ? null : parsed;
   };
 
+  const uploadFileToStorage = async (file: File): Promise<string | null> => {
+    try {
+      const user = (await supabase.auth.getUser()).data.user;
+      if (!user) return null;
+      
+      const timestamp = Date.now();
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const filePath = `${user.id}/${timestamp}_${safeName}`;
+      
+      const { error } = await supabase.storage
+        .from('invoices')
+        .upload(filePath, file);
+      
+      if (error) {
+        console.error('Storage upload error:', error);
+        return null;
+      }
+      
+      return filePath;
+    } catch (error) {
+      console.error('Error uploading to storage:', error);
+      return null;
+    }
+  };
+
   const processFile = async (uploadedFile: UploadedFile) => {
     // Update status to processing
     setFiles((prev) =>
       prev.map((f) =>
-        f.id === uploadedFile.id ? { ...f, status: 'processing', progress: 50 } : f
+        f.id === uploadedFile.id ? { ...f, status: 'processing', progress: 30 } : f
       )
     );
 
     try {
+      // Upload original file to storage
+      const filePath = await uploadFileToStorage(uploadedFile.file);
+      
+      // Update progress
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === uploadedFile.id ? { ...f, progress: 50 } : f
+        )
+      );
+
       // Extract invoice data using AI
       const extractedData = await extractInvoice(uploadedFile.file);
 
@@ -146,6 +182,7 @@ export default function UploadPage() {
           lookup_url: core.lookup_url || null,
           exchange_rate: parseNumber(core.exchange_rate),
           status: 'processed',
+          original_file_path: filePath || null,
           raw_json: extractedData as unknown as Record<string, unknown>,
           extend: extractedData.extend && Object.keys(extractedData.extend).length > 0 
             ? extractedData.extend as Record<string, unknown> 
@@ -277,9 +314,14 @@ export default function UploadPage() {
       }
     }
     
-    // Giải nén các file ZIP
+    // Giải nén các file ZIP và lưu file ZIP gốc vào storage
     if (zipFiles.length > 0) {
       toast.info(`Đang giải nén ${zipFiles.length} file ZIP...`);
+      
+      // Lưu file ZIP gốc vào storage
+      for (const zipFile of zipFiles) {
+        await uploadFileToStorage(zipFile);
+      }
       
       const extractPromises = zipFiles.map(extractFilesFromZip);
       const extractedFilesArrays = await Promise.all(extractPromises);
