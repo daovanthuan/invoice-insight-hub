@@ -93,6 +93,7 @@ export interface Invoice {
   created_at: string;
   updated_at: string;
   original_file_path: string | null;
+  source_zip_name: string | null;
   // Joined profiles
   created_by_profile?: { user_code: string | null } | null;
   updated_by_profile?: { user_code: string | null } | null;

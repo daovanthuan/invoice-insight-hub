@@ -98,6 +98,7 @@ export type Database = {
           owner_id: string | null
           payment_method: string | null
           raw_json: Json | null
+          source_zip_name: string | null
           status: Database["public"]["Enums"]["invoice_status"]
           subtotal: number | null
           tax_amount: number | null
@@ -136,6 +137,7 @@ export type Database = {
           owner_id?: string | null
           payment_method?: string | null
           raw_json?: Json | null
+          source_zip_name?: string | null
           status?: Database["public"]["Enums"]["invoice_status"]
           subtotal?: number | null
           tax_amount?: number | null
@@ -174,6 +176,7 @@ export type Database = {
           owner_id?: string | null
           payment_method?: string | null
           raw_json?: Json | null
+          source_zip_name?: string | null
           status?: Database["public"]["Enums"]["invoice_status"]
           subtotal?: number | null
           tax_amount?: number | null
