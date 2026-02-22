@@ -99,7 +99,7 @@ export default function UploadPage() {
     }));
   };
 
-  const processFile = async (uploadedFile: UploadedFile) => {
+  const processFile = async (uploadedFile: UploadedFile, sourceZipName?: string) => {
     updateFileInEntries(uploadedFile.id, f => ({ ...f, status: 'processing', progress: 30 }));
 
     try {
@@ -160,6 +160,7 @@ export default function UploadPage() {
           exchange_rate: parseNumber(core.exchange_rate),
           status: 'processed',
           original_file_path: filePath || null,
+          source_zip_name: sourceZipName || null,
           raw_json: extractedData as unknown as Record<string, unknown>,
           extend: extractedData.extend && Object.keys(extractedData.extend).length > 0
             ? extractedData.extend as Record<string, unknown>
@@ -285,7 +286,7 @@ export default function UploadPage() {
     }
     for (const entry of newZipEntries) {
       if (entry.type === 'zip') {
-        entry.group.files.forEach(f => processFile(f));
+        entry.group.files.forEach(f => processFile(f, entry.group.zipName));
       }
     }
   };

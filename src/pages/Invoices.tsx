@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { format, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
 import { motion } from 'framer-motion';
 import { MainLayout } from '@/components/layout/MainLayout';
@@ -13,38 +13,21 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Search, Filter, Eye, Download, FileText, Loader2, Pencil, Ban, CalendarIcon, X } from 'lucide-react';
+import { Search, Filter, Eye, Download, FileText, Loader2, Pencil, Ban, CalendarIcon, X, ChevronRight, Archive, FolderOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { InvoiceEditDialog } from '@/components/invoices/InvoiceEditDialog';
 import { supabase } from '@/integrations/supabase/client';
@@ -67,6 +50,10 @@ const statusLabels: Record<string, string> = {
   rejected: 'Từ chối',
   cancelled: 'Đã hủy',
 };
+
+type InvoiceGroup =
+  | { type: 'single'; invoice: Invoice }
+  | { type: 'zip'; zipName: string; invoices: Invoice[] };
 
 export default function InvoicesPage() {
   const { invoices, loading, fetchInvoiceItems, updateInvoice, fetchInvoices } = useInvoices();
@@ -101,8 +88,6 @@ export default function InvoicesPage() {
     setIsCancelling(false);
     setCancelId(null);
     toast.success('Đã hủy hóa đơn');
-    
-    // Create notification for cancelled invoice
     await createNotification({
       title: 'Hóa đơn đã bị hủy',
       message: `Hóa đơn "${invoiceToCancel?.invoice_number || invoiceToCancel?.invoice_serial || 'N/A'}" đã được hủy.`,
@@ -119,16 +104,12 @@ export default function InvoicesPage() {
 
     const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter;
 
-    // Date range filter (based on created_at)
     let matchesDate = true;
     if (dateFrom || dateTo) {
       const invoiceDate = invoice.created_at ? new Date(invoice.created_at) : null;
       if (invoiceDate) {
         if (dateFrom && dateTo) {
-          matchesDate = isWithinInterval(invoiceDate, {
-            start: startOfDay(dateFrom),
-            end: endOfDay(dateTo),
-          });
+          matchesDate = isWithinInterval(invoiceDate, { start: startOfDay(dateFrom), end: endOfDay(dateTo) });
         } else if (dateFrom) {
           matchesDate = invoiceDate >= startOfDay(dateFrom);
         } else if (dateTo) {
@@ -141,6 +122,36 @@ export default function InvoicesPage() {
 
     return matchesSearch && matchesStatus && matchesDate;
   });
+
+  // Group filtered invoices: ZIP groups + singles
+  const groupedInvoices = useMemo<InvoiceGroup[]>(() => {
+    const zipMap = new Map<string, Invoice[]>();
+    const singles: Invoice[] = [];
+
+    for (const inv of filteredInvoices) {
+      if (inv.source_zip_name) {
+        const existing = zipMap.get(inv.source_zip_name) || [];
+        existing.push(inv);
+        zipMap.set(inv.source_zip_name, existing);
+      } else {
+        singles.push(inv);
+      }
+    }
+
+    const groups: InvoiceGroup[] = [];
+
+    // Add ZIP groups
+    for (const [zipName, invs] of zipMap) {
+      groups.push({ type: 'zip', zipName, invoices: invs });
+    }
+
+    // Add singles
+    for (const inv of singles) {
+      groups.push({ type: 'single', invoice: inv });
+    }
+
+    return groups;
+  }, [filteredInvoices]);
 
   const handleViewInvoice = async (invoice: Invoice) => {
     setSelectedInvoice(invoice);
@@ -161,15 +172,10 @@ export default function InvoicesPage() {
     items: Partial<InvoiceItem>[]
   ): Promise<boolean> => {
     if (!editInvoice) return false;
-
     try {
-      // Update invoice
       const success = await updateInvoice(editInvoice.id, invoiceData);
       if (!success) return false;
-
-      // Delete existing items and insert new ones
       await supabase.from('invoice_items').delete().eq('invoice_id', editInvoice.id);
-
       if (items.length > 0) {
         const itemsToInsert = items.map((item, index) => ({
           invoice_id: editInvoice.id,
@@ -181,7 +187,6 @@ export default function InvoicesPage() {
           amount: item.amount ?? null,
           sort_order: index,
         }));
-
         const { error } = await supabase.from('invoice_items').insert(itemsToInsert);
         if (error) {
           console.error('Error updating invoice items:', error);
@@ -189,7 +194,6 @@ export default function InvoicesPage() {
           return false;
         }
       }
-
       await fetchInvoices();
       return true;
     } catch (error) {
@@ -201,14 +205,9 @@ export default function InvoicesPage() {
   const exportCSV = () => {
     const headers = ['Invoice Number', 'Vendor', 'Date', 'Currency', 'Total', 'Status'];
     const rows = filteredInvoices.map((inv) => [
-      inv.invoice_number || '',
-      inv.vendor_name || '',
-      inv.invoice_date || '',
-      inv.currency || '',
-      String(inv.total_amount || ''),
-      inv.status || '',
+      inv.invoice_number || '', inv.vendor_name || '', inv.invoice_date || '',
+      inv.currency || '', String(inv.total_amount || ''), inv.status || '',
     ]);
-
     const csvContent = [headers, ...rows].map((row) => row.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -224,29 +223,104 @@ export default function InvoicesPage() {
     return amount.toLocaleString('vi-VN');
   };
 
+  const renderInvoiceRow = (invoice: Invoice, index: number) => {
+    const isCancelled = invoice.status === 'cancelled';
+    const createdAt = invoice.created_at ? new Date(invoice.created_at) : null;
+    const updatedAt = invoice.updated_at ? new Date(invoice.updated_at) : null;
+    const isUpdated = createdAt && updatedAt && updatedAt.getTime() - createdAt.getTime() > 1000;
+
+    return (
+      <motion.tr
+        key={invoice.id}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 * index }}
+        className={cn(
+          "border-border cursor-pointer",
+          isCancelled ? "opacity-50 bg-muted/20" : "hover:bg-muted/30"
+        )}
+        onClick={() => handleViewInvoice(invoice)}
+      >
+        <TableCell className="font-medium">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+              <FileText className="h-4 w-4 text-primary" />
+            </div>
+            {invoice.invoice_number || invoice.invoice_serial || 'N/A'}
+          </div>
+        </TableCell>
+        <TableCell>{invoice.vendor_name || 'N/A'}</TableCell>
+        <TableCell>{invoice.invoice_date || 'N/A'}</TableCell>
+        <TableCell className="font-semibold">
+          {invoice.currency || ''} {formatAmount(invoice.total_amount)}
+        </TableCell>
+        <TableCell>
+          <Badge variant="outline" className={cn('capitalize', statusStyles[invoice.status] || statusStyles.pending)}>
+            {statusLabels[invoice.status] || invoice.status}
+          </Badge>
+        </TableCell>
+        {isAdmin && (
+          <>
+            <TableCell className="text-sm text-muted-foreground">{invoice.created_by_profile?.user_code || '-'}</TableCell>
+            <TableCell className="text-sm text-muted-foreground">{createdAt ? format(createdAt, 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+            <TableCell className="text-sm text-muted-foreground">{isUpdated ? (invoice.updated_by_profile?.user_code || '-') : '-'}</TableCell>
+            <TableCell className="text-sm text-muted-foreground">{isUpdated ? format(updatedAt, 'dd/MM/yyyy HH:mm') : '-'}</TableCell>
+          </>
+        )}
+        <TableCell className="text-right">
+          <div className="flex items-center justify-end gap-2">
+            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleViewInvoice(invoice); }}>
+              <Eye className="h-4 w-4" />
+            </Button>
+            {!isCancelled && (
+              <>
+                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleEditInvoice(invoice); }} className="text-muted-foreground hover:text-primary">
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setCancelId(invoice.id); }} className="text-muted-foreground hover:text-warning" title="Hủy hóa đơn">
+                  <Ban className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+          </div>
+        </TableCell>
+      </motion.tr>
+    );
+  };
+
+  const tableHeaders = (
+    <TableHeader>
+      <TableRow className="border-border hover:bg-transparent">
+        <TableHead className="text-muted-foreground">Mã HĐ</TableHead>
+        <TableHead className="text-muted-foreground">Nhà cung cấp</TableHead>
+        <TableHead className="text-muted-foreground">Ngày HĐ</TableHead>
+        <TableHead className="text-muted-foreground">Tổng tiền</TableHead>
+        <TableHead className="text-muted-foreground">Trạng thái</TableHead>
+        {isAdmin && (
+          <>
+            <TableHead className="text-muted-foreground">Người tạo</TableHead>
+            <TableHead className="text-muted-foreground">Ngày tạo</TableHead>
+            <TableHead className="text-muted-foreground">Người cập nhật</TableHead>
+            <TableHead className="text-muted-foreground">Ngày cập nhật</TableHead>
+          </>
+        )}
+        <TableHead className="text-muted-foreground text-right">Thao tác</TableHead>
+      </TableRow>
+    </TableHeader>
+  );
+
   return (
     <MainLayout>
       <Header title="Hóa Đơn" subtitle="Quản lý và xem hóa đơn đã trích xuất" />
 
       <div className="p-6">
         {/* Filters */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 space-y-4"
-        >
-          {/* Row 1: Search and main filters */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 space-y-4">
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-[200px] max-w-md">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Tìm theo mã HĐ, nhà cung cấp, người mua..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 bg-muted/50"
-              />
+              <Input placeholder="Tìm theo mã HĐ, nhà cung cấp, người mua..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 bg-muted/50" />
             </div>
-
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[150px] bg-muted/50">
                 <Filter className="mr-2 h-4 w-4" />
@@ -262,56 +336,30 @@ export default function InvoicesPage() {
                 <SelectItem value="cancelled">Đã hủy</SelectItem>
               </SelectContent>
             </Select>
-
           </div>
 
-          {/* Row 2: Date filters and actions */}
           <div className="flex flex-wrap items-center gap-3">
             <Popover>
               <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-[160px] justify-start text-left font-normal bg-muted/50",
-                    !dateFrom && "text-muted-foreground"
-                  )}
-                >
+                <Button variant="outline" className={cn("w-[160px] justify-start text-left font-normal bg-muted/50", !dateFrom && "text-muted-foreground")}>
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {dateFrom ? format(dateFrom, "dd/MM/yyyy") : "Từ ngày"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={dateFrom}
-                  onSelect={setDateFrom}
-                  initialFocus
-                  className="pointer-events-auto"
-                />
+                <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus className="pointer-events-auto" />
               </PopoverContent>
             </Popover>
 
             <Popover>
               <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-[160px] justify-start text-left font-normal bg-muted/50",
-                    !dateTo && "text-muted-foreground"
-                  )}
-                >
+                <Button variant="outline" className={cn("w-[160px] justify-start text-left font-normal bg-muted/50", !dateTo && "text-muted-foreground")}>
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {dateTo ? format(dateTo, "dd/MM/yyyy") : "Đến ngày"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={dateTo}
-                  onSelect={setDateTo}
-                  initialFocus
-                  className="pointer-events-auto"
-                />
+                <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus className="pointer-events-auto" />
               </PopoverContent>
             </Popover>
 
@@ -340,145 +388,50 @@ export default function InvoicesPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="glass rounded-xl overflow-hidden"
+          className="space-y-3"
         >
           {loading ? (
-            <div className="p-6 space-y-4">
+            <div className="glass rounded-xl p-6 space-y-4">
               {[1, 2, 3, 4, 5].map((i) => (
                 <Skeleton key={i} className="h-16 w-full" />
               ))}
             </div>
           ) : filteredInvoices.length === 0 ? (
-            <div className="p-12 text-center">
+            <div className="glass rounded-xl p-12 text-center">
               <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <p className="text-muted-foreground">
-                {invoices.length === 0
-                  ? 'Chưa có hóa đơn nào. Hãy upload hóa đơn để bắt đầu.'
-                  : 'Không tìm thấy hóa đơn phù hợp.'}
+                {invoices.length === 0 ? 'Chưa có hóa đơn nào. Hãy upload hóa đơn để bắt đầu.' : 'Không tìm thấy hóa đơn phù hợp.'}
               </p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="border-border hover:bg-transparent">
-                  <TableHead className="text-muted-foreground">Mã HĐ</TableHead>
-                  <TableHead className="text-muted-foreground">Nhà cung cấp</TableHead>
-                  <TableHead className="text-muted-foreground">Ngày HĐ</TableHead>
-                  <TableHead className="text-muted-foreground">Tổng tiền</TableHead>
-                  <TableHead className="text-muted-foreground">Trạng thái</TableHead>
-                  {isAdmin && (
-                    <>
-                      <TableHead className="text-muted-foreground">Người tạo</TableHead>
-                      <TableHead className="text-muted-foreground">Ngày tạo</TableHead>
-                      <TableHead className="text-muted-foreground">Người cập nhật</TableHead>
-                      <TableHead className="text-muted-foreground">Ngày cập nhật</TableHead>
-                    </>
-                  )}
-                  <TableHead className="text-muted-foreground text-right">Thao tác</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredInvoices.map((invoice, index) => {
-                  const isCancelled = invoice.status === 'cancelled';
-                  const createdAt = invoice.created_at ? new Date(invoice.created_at) : null;
-                  const updatedAt = invoice.updated_at ? new Date(invoice.updated_at) : null;
-                  const isUpdated = createdAt && updatedAt && updatedAt.getTime() - createdAt.getTime() > 1000;
-                  
-                  return (
-                  <motion.tr
-                    key={invoice.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.05 * index }}
-                    className={cn(
-                      "border-border cursor-pointer",
-                      isCancelled ? "opacity-50 bg-muted/20" : "hover:bg-muted/30"
-                    )}
-                    onClick={() => handleViewInvoice(invoice)}
-                  >
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                          <FileText className="h-4 w-4 text-primary" />
-                        </div>
-                        {invoice.invoice_number || invoice.invoice_serial || 'N/A'}
-                      </div>
-                    </TableCell>
-                    <TableCell>{invoice.vendor_name || 'N/A'}</TableCell>
-                    <TableCell>{invoice.invoice_date || 'N/A'}</TableCell>
-                    <TableCell className="font-semibold">
-                      {invoice.currency || ''} {formatAmount(invoice.total_amount)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={cn('capitalize', statusStyles[invoice.status] || statusStyles.pending)}
-                      >
-                        {statusLabels[invoice.status] || invoice.status}
-                      </Badge>
-                    </TableCell>
-                    {isAdmin && (
-                      <>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {invoice.created_by_profile?.user_code || '-'}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {createdAt ? format(createdAt, 'dd/MM/yyyy HH:mm') : '-'}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {isUpdated ? (invoice.updated_by_profile?.user_code || '-') : '-'}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {isUpdated ? format(updatedAt, 'dd/MM/yyyy HH:mm') : '-'}
-                        </TableCell>
-                      </>
-                    )}
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleViewInvoice(invoice);
-                          }}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        {!isCancelled && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditInvoice(invoice);
-                              }}
-                              className="text-muted-foreground hover:text-primary"
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setCancelId(invoice.id);
-                              }}
-                              className="text-muted-foreground hover:text-warning"
-                              title="Hủy hóa đơn"
-                            >
-                              <Ban className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
-                  </motion.tr>
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <div className="space-y-3">
+              {/* ZIP folders */}
+              {groupedInvoices.filter(g => g.type === 'zip').map((group) => (
+                group.type === 'zip' && (
+                  <ZipInvoiceFolder
+                    key={group.zipName}
+                    zipName={group.zipName}
+                    invoices={group.invoices}
+                    isAdmin={isAdmin}
+                    tableHeaders={tableHeaders}
+                    renderInvoiceRow={renderInvoiceRow}
+                    formatAmount={formatAmount}
+                  />
+                )
+              ))}
+
+              {/* Single invoices in one table */}
+              {groupedInvoices.some(g => g.type === 'single') && (
+                <div className="glass rounded-xl overflow-hidden">
+                  <Table>
+                    {tableHeaders}
+                    <TableBody>
+                      {groupedInvoices.map((g, i) => g.type === 'single' && renderInvoiceRow(g.invoice, i))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
           )}
         </motion.div>
 
@@ -494,80 +447,39 @@ export default function InvoicesPage() {
 
             {selectedInvoice && (
               <div className="space-y-6">
-                {/* Vendor & Buyer Info */}
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-3">
                     <h4 className="font-semibold text-primary">Thông tin nhà cung cấp</h4>
                     <div className="space-y-2 text-sm">
-                      <p>
-                        <span className="text-muted-foreground">Tên:</span>{' '}
-                        {selectedInvoice.vendor_name || 'N/A'}
-                      </p>
-                      <p>
-                        <span className="text-muted-foreground">MST:</span>{' '}
-                        {selectedInvoice.vendor_tax_id || 'N/A'}
-                      </p>
-                      <p>
-                        <span className="text-muted-foreground">Địa chỉ:</span>{' '}
-                        {selectedInvoice.vendor_address || 'N/A'}
-                      </p>
-                      <p>
-                        <span className="text-muted-foreground">SĐT:</span>{' '}
-                        {selectedInvoice.vendor_phone || 'N/A'}
-                      </p>
+                      <p><span className="text-muted-foreground">Tên:</span> {selectedInvoice.vendor_name || 'N/A'}</p>
+                      <p><span className="text-muted-foreground">MST:</span> {selectedInvoice.vendor_tax_id || 'N/A'}</p>
+                      <p><span className="text-muted-foreground">Địa chỉ:</span> {selectedInvoice.vendor_address || 'N/A'}</p>
+                      <p><span className="text-muted-foreground">SĐT:</span> {selectedInvoice.vendor_phone || 'N/A'}</p>
                     </div>
                   </div>
-
                   <div className="space-y-3">
                     <h4 className="font-semibold text-primary">Thông tin người mua</h4>
                     <div className="space-y-2 text-sm">
-                      <p>
-                        <span className="text-muted-foreground">Tên:</span>{' '}
-                        {selectedInvoice.buyer_name || 'N/A'}
-                      </p>
-                      <p>
-                        <span className="text-muted-foreground">MST:</span>{' '}
-                        {selectedInvoice.buyer_tax_id || 'N/A'}
-                      </p>
-                      <p>
-                        <span className="text-muted-foreground">Địa chỉ:</span>{' '}
-                        {selectedInvoice.buyer_address || 'N/A'}
-                      </p>
+                      <p><span className="text-muted-foreground">Tên:</span> {selectedInvoice.buyer_name || 'N/A'}</p>
+                      <p><span className="text-muted-foreground">MST:</span> {selectedInvoice.buyer_tax_id || 'N/A'}</p>
+                      <p><span className="text-muted-foreground">Địa chỉ:</span> {selectedInvoice.buyer_address || 'N/A'}</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Invoice Meta */}
                 <div className="grid gap-4 md:grid-cols-4 p-4 rounded-lg bg-muted/30">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Ngày hóa đơn</p>
-                    <p className="font-semibold">{selectedInvoice.invoice_date || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Hình thức TT</p>
-                    <p className="font-semibold">{selectedInvoice.payment_method || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Tiền tệ</p>
-                    <p className="font-semibold">{selectedInvoice.currency || 'N/A'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Ký hiệu</p>
-                    <p className="font-semibold">{selectedInvoice.invoice_serial || 'N/A'}</p>
-                  </div>
+                  <div><p className="text-xs text-muted-foreground">Ngày hóa đơn</p><p className="font-semibold">{selectedInvoice.invoice_date || 'N/A'}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Hình thức TT</p><p className="font-semibold">{selectedInvoice.payment_method || 'N/A'}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Tiền tệ</p><p className="font-semibold">{selectedInvoice.currency || 'N/A'}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Ký hiệu</p><p className="font-semibold">{selectedInvoice.invoice_serial || 'N/A'}</p></div>
                 </div>
 
-                {/* Line Items */}
                 <div>
                   <h4 className="mb-3 font-semibold text-primary">Danh mục hàng hóa</h4>
                   {loadingItems ? (
-                    <div className="flex items-center justify-center p-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                    </div>
+                    <div className="flex items-center justify-center p-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
                   ) : invoiceItems.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center p-4">
-                      Không có dữ liệu hàng hóa
-                    </p>
+                    <p className="text-sm text-muted-foreground text-center p-4">Không có dữ liệu hàng hóa</p>
                   ) : (
                     <div className="rounded-lg border border-border overflow-hidden">
                       <Table>
@@ -584,20 +496,12 @@ export default function InvoicesPage() {
                         <TableBody>
                           {invoiceItems.map((item, idx) => (
                             <TableRow key={idx}>
-                              <TableCell className="font-mono text-xs">
-                                {item.item_code || 'N/A'}
-                              </TableCell>
+                              <TableCell className="font-mono text-xs">{item.item_code || 'N/A'}</TableCell>
                               <TableCell className="text-sm">{item.description || 'N/A'}</TableCell>
                               <TableCell className="text-sm">{item.unit || 'N/A'}</TableCell>
-                              <TableCell className="text-sm text-right">
-                                {item.quantity || '0'}
-                              </TableCell>
-                              <TableCell className="text-sm text-right">
-                                {formatAmount(item.unit_price)}
-                              </TableCell>
-                              <TableCell className="font-semibold text-right">
-                                {formatAmount(item.amount)}
-                              </TableCell>
+                              <TableCell className="text-sm text-right">{item.quantity || '0'}</TableCell>
+                              <TableCell className="text-sm text-right">{formatAmount(item.unit_price)}</TableCell>
+                              <TableCell className="font-semibold text-right">{formatAmount(item.amount)}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -606,7 +510,6 @@ export default function InvoicesPage() {
                   )}
                 </div>
 
-                {/* Totals */}
                 <div className="flex justify-end">
                   <div className="w-64 space-y-2">
                     <div className="flex justify-between text-sm">
@@ -614,39 +517,28 @@ export default function InvoicesPage() {
                       <span>{formatAmount(selectedInvoice.subtotal)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        Thuế ({selectedInvoice.tax_rate || '0'}%)
-                      </span>
+                      <span className="text-muted-foreground">Thuế ({selectedInvoice.tax_rate || '0'}%)</span>
                       <span>{formatAmount(selectedInvoice.tax_amount)}</span>
                     </div>
                     <div className="flex justify-between pt-2 border-t border-border font-semibold text-lg">
                       <span>Tổng cộng</span>
-                      <span className="text-primary">
-                        {selectedInvoice.currency || ''} {formatAmount(selectedInvoice.total_amount)}
-                      </span>
+                      <span className="text-primary">{selectedInvoice.currency || ''} {formatAmount(selectedInvoice.total_amount)}</span>
                     </div>
                   </div>
                 </div>
 
                 {selectedInvoice.amount_in_words && (
-                  <p className="text-sm text-muted-foreground italic text-right">
-                    {selectedInvoice.amount_in_words}
-                  </p>
+                  <p className="text-sm text-muted-foreground italic text-right">{selectedInvoice.amount_in_words}</p>
                 )}
 
-                {/* Extend Section */}
                 {selectedInvoice.extend && Object.keys(selectedInvoice.extend).length > 0 && (
                   <div className="mt-6 pt-6 border-t border-border">
                     <h4 className="mb-3 font-semibold text-primary">Thông tin mở rộng</h4>
                     <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                       {Object.entries(selectedInvoice.extend).map(([key, value]) => (
                         <div key={key} className="p-3 rounded-lg bg-muted/30">
-                          <p className="text-xs text-muted-foreground capitalize">
-                            {key.replace(/_/g, ' ')}
-                          </p>
-                          <p className="font-medium text-sm mt-1">
-                            {typeof value === 'object' ? JSON.stringify(value) : String(value || 'N/A')}
-                          </p>
+                          <p className="text-xs text-muted-foreground capitalize">{key.replace(/_/g, ' ')}</p>
+                          <p className="font-medium text-sm mt-1">{typeof value === 'object' ? JSON.stringify(value) : String(value || 'N/A')}</p>
                         </div>
                       ))}
                     </div>
@@ -668,29 +560,72 @@ export default function InvoicesPage() {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Đóng</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleCancelInvoice}
-                disabled={isCancelling}
-                className="bg-warning hover:bg-warning/90 text-warning-foreground"
-              >
+              <AlertDialogAction onClick={handleCancelInvoice} disabled={isCancelling} className="bg-warning hover:bg-warning/90 text-warning-foreground">
                 {isCancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Hủy hóa đơn'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Edit Invoice Dialog */}
         <InvoiceEditDialog
           invoice={editInvoice}
           items={editItems}
           open={!!editInvoice}
-          onClose={() => {
-            setEditInvoice(null);
-            setEditItems([]);
-          }}
+          onClose={() => { setEditInvoice(null); setEditItems([]); }}
           onSave={handleSaveInvoice}
         />
       </div>
     </MainLayout>
+  );
+}
+
+function ZipInvoiceFolder({
+  zipName,
+  invoices,
+  isAdmin,
+  tableHeaders,
+  renderInvoiceRow,
+  formatAmount,
+}: {
+  zipName: string;
+  invoices: Invoice[];
+  isAdmin: boolean;
+  tableHeaders: React.ReactNode;
+  renderInvoiceRow: (invoice: Invoice, index: number) => React.ReactNode;
+  formatAmount: (amount: number | null) => string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const totalAmount = invoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <CollapsibleTrigger asChild>
+          <button className="flex items-center gap-3 w-full p-4 hover:bg-muted/30 transition-colors text-left">
+            <ChevronRight className={cn('h-4 w-4 text-muted-foreground transition-transform shrink-0', isOpen && 'rotate-90')} />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent shrink-0">
+              {isOpen ? <FolderOpen className="h-5 w-5 text-accent-foreground" /> : <Archive className="h-5 w-5 text-accent-foreground" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-foreground truncate">{zipName}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {invoices.length} hóa đơn · Tổng: {formatAmount(totalAmount)}
+              </p>
+            </div>
+            <Badge variant="outline" className="shrink-0">{invoices.length} file</Badge>
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="border-t border-border">
+            <Table>
+              {tableHeaders}
+              <TableBody>
+                {invoices.map((inv, i) => renderInvoiceRow(inv, i))}
+              </TableBody>
+            </Table>
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
   );
 }
