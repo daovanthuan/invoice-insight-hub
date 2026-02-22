@@ -62,6 +62,13 @@ export type Database = {
             foreignKeyName: "invoice_items_invoice_id_fkey"
             columns: ["invoice_id"]
             isOneToOne: false
+            referencedRelation: "fact_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
             referencedRelation: "invoices"
             referencedColumns: ["id"]
           },
@@ -87,6 +94,7 @@ export type Database = {
           invoice_type: string | null
           lookup_code: string | null
           lookup_url: string | null
+          original_file_path: string | null
           owner_id: string | null
           payment_method: string | null
           raw_json: Json | null
@@ -124,6 +132,7 @@ export type Database = {
           invoice_type?: string | null
           lookup_code?: string | null
           lookup_url?: string | null
+          original_file_path?: string | null
           owner_id?: string | null
           payment_method?: string | null
           raw_json?: Json | null
@@ -161,6 +170,7 @@ export type Database = {
           invoice_type?: string | null
           lookup_code?: string | null
           lookup_url?: string | null
+          original_file_path?: string | null
           owner_id?: string | null
           payment_method?: string | null
           raw_json?: Json | null
@@ -445,7 +455,161 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      analytics_vendor_comparison: {
+        Row: {
+          avg_confidence: number | null
+          avg_invoice_value: number | null
+          currency_count: number | null
+          max_invoice: number | null
+          min_invoice: number | null
+          success_rate: number | null
+          total_invoices: number | null
+          total_revenue: number | null
+          vendor_name: string | null
+          vendor_rating: string | null
+          vendor_scale: string | null
+        }
+        Relationships: []
+      }
+      analytics_vendor_monthly: {
+        Row: {
+          avg_amount: number | null
+          invoice_count: number | null
+          month: number | null
+          pending_count: number | null
+          period: string | null
+          processed_count: number | null
+          rejected_count: number | null
+          success_rate: number | null
+          total_revenue: number | null
+          total_tax: number | null
+          vendor_name: string | null
+          year: number | null
+        }
+        Relationships: []
+      }
+      dim_buyer: {
+        Row: {
+          buyer_address: string | null
+          buyer_name: string | null
+          buyer_tax_id: string | null
+        }
+        Relationships: []
+      }
+      dim_time: {
+        Row: {
+          date_value: string | null
+          day_of_month: number | null
+          day_of_week: number | null
+          month: number | null
+          month_name: string | null
+          quarter: number | null
+          quarter_name: string | null
+          year: number | null
+        }
+        Relationships: []
+      }
+      dim_vendor: {
+        Row: {
+          vendor_address: string | null
+          vendor_name: string | null
+          vendor_phone: string | null
+          vendor_tax_id: string | null
+        }
+        Relationships: []
+      }
+      fact_invoices: {
+        Row: {
+          buyer_name: string | null
+          buyer_tax_id: string | null
+          confidence_score: number | null
+          created_at: string | null
+          currency: string | null
+          exchange_rate: number | null
+          id: string | null
+          invoice_date: string | null
+          is_approved: number | null
+          is_pending: number | null
+          is_processed: number | null
+          is_rejected: number | null
+          item_count: number | null
+          month: number | null
+          owner_id: string | null
+          payment_method: string | null
+          quarter: number | null
+          status: Database["public"]["Enums"]["invoice_status"] | null
+          subtotal: number | null
+          tax_amount: number | null
+          tax_rate: number | null
+          total_amount: number | null
+          vendor_name: string | null
+          vendor_tax_id: string | null
+          year: number | null
+        }
+        Insert: {
+          buyer_name?: string | null
+          buyer_tax_id?: string | null
+          confidence_score?: number | null
+          created_at?: string | null
+          currency?: string | null
+          exchange_rate?: number | null
+          id?: string | null
+          invoice_date?: string | null
+          is_approved?: never
+          is_pending?: never
+          is_processed?: never
+          is_rejected?: never
+          item_count?: never
+          month?: never
+          owner_id?: string | null
+          payment_method?: string | null
+          quarter?: never
+          status?: Database["public"]["Enums"]["invoice_status"] | null
+          subtotal?: number | null
+          tax_amount?: number | null
+          tax_rate?: number | null
+          total_amount?: number | null
+          vendor_name?: string | null
+          vendor_tax_id?: string | null
+          year?: never
+        }
+        Update: {
+          buyer_name?: string | null
+          buyer_tax_id?: string | null
+          confidence_score?: number | null
+          created_at?: string | null
+          currency?: string | null
+          exchange_rate?: number | null
+          id?: string | null
+          invoice_date?: string | null
+          is_approved?: never
+          is_pending?: never
+          is_processed?: never
+          is_rejected?: never
+          item_count?: never
+          month?: never
+          owner_id?: string | null
+          payment_method?: string | null
+          quarter?: never
+          status?: Database["public"]["Enums"]["invoice_status"] | null
+          subtotal?: number | null
+          tax_amount?: number | null
+          tax_rate?: number | null
+          total_amount?: number | null
+          vendor_name?: string | null
+          vendor_tax_id?: string | null
+          year?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       get_user_roles: {
