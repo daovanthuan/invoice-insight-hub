@@ -90,7 +90,10 @@ const extractInvoiceAsync = async (file: File): Promise<ExtractedData | null> =>
 
     toast.success("Trích xuất hóa đơn thành công!");
 
-    return data.data as ExtractedData;
+    // Attach confidence_score to the returned data
+    const result = data.data as ExtractedData;
+    (result as any).confidence_score = data.confidence_score ?? null;
+    return result;
   } catch (error) {
     console.error("Extraction error:", error);
     toast.error("Đã xảy ra lỗi khi trích xuất hóa đơn");

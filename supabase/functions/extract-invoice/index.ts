@@ -333,7 +333,20 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ success: true, data: extractedData }), {
+    // Calculate a simple confidence score based on how many core fields were extracted
+    const coreData = (extractedData as any)?.core || {};
+    const coreFields = [
+      'vendor_name', 'vendor_tax_id', 'buyer_name', 'buyer_tax_id',
+      'invoice_id', 'invoice_date', 'total_amount', 'subtotal',
+      'tax_amount', 'tax_rate', 'currency', 'payment_method',
+    ];
+    const filledFields = coreFields.filter(f => {
+      const val = coreData[f];
+      return val !== undefined && val !== null && val !== '';
+    }).length;
+    const confidenceScore = Math.round((filledFields / coreFields.length) * 100) / 100;
+
+    return new Response(JSON.stringify({ success: true, data: extractedData, confidence_score: confidenceScore }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
