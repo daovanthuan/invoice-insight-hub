@@ -161,6 +161,9 @@ export default function UploadPage() {
       const calculatedSubtotal = processedLineItems.reduce((sum, item) => sum + (item.amount || 0), 0);
       const subtotalValue = calculatedSubtotal > 0 ? calculatedSubtotal : parseNumber(core.subtotal);
 
+      // Get confidence score from extraction result
+      const confidenceScore = (extractedData as any).confidence_score ?? null;
+
       const invoice = await createInvoice(
         {
           vendor_name: core.vendor_name || null,
@@ -188,6 +191,7 @@ export default function UploadPage() {
           lookup_url: core.lookup_url || null,
           exchange_rate: parseNumber(core.exchange_rate),
           status: 'processed',
+          confidence_score: confidenceScore,
           original_file_path: filePath || null,
           source_zip_name: sourceZipName || null,
           raw_json: extractedData as unknown as Record<string, unknown>,
