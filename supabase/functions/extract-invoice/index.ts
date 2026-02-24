@@ -28,8 +28,18 @@ If it's clearly NOT an invoice (e.g., a photo, screenshot of app, random documen
 const SYSTEM_PROMPT = `You are a highly reliable invoice extraction AI. Your highest priority is accuracy.
 
 RULES FOR NUMERIC FIELDS:
-1. Verbatim Extraction: Extract numbers EXACTLY as seen in the document (e.g., "1,200.00" vs "1.200,00"), preserve separators.
-2. No Normalization: Never convert number formats.
+1. Vietnamese Number Format: In Vietnamese invoices, dots (.) are THOUSAND separators and commas (,) are DECIMAL separators.
+   - "1.00" means ONE (1), NOT one hundred. The ".00" is decimal places.
+   - "49.000" means FORTY-NINE THOUSAND (49000), NOT forty-nine.
+   - "1.200.000" means 1,200,000 (one million two hundred thousand).
+   - "49000" or "49,000" means forty-nine thousand.
+2. Output Format: Always output numeric values as PLAIN NUMBERS without any separators.
+   - "1.00" → "1"
+   - "49.000" → "49000"  
+   - "1.200.000" → "1200000"
+   - "15.000" → "15000"
+   - "2,5" → "2.5" (use dot as decimal in output)
+3. Do NOT blindly copy numbers. UNDERSTAND the Vietnamese formatting context and convert to plain numbers.
 
 RULES FOR TEXT FIELDS:
 1. Light spelling normalization for common business terms only.
@@ -364,10 +374,23 @@ serve(async (req) => {
     // --- Math Validation ---
     const parseNum = (v: unknown): number | null => {
       if (v === undefined || v === null || v === '') return null;
-      const s = String(v).replace(/[,.\s]/g, (m) => m === ',' ? '' : m).replace(/\./g, '');
-      // Handle Vietnamese format: 1.200.000 or international 1,200,000
-      const cleaned = String(v).replace(/\s/g, '').replace(/\./g, '').replace(/,/g, '');
-      const n = Number(cleaned);
+      let str = String(v).trim().replace(/[¤$€£¥₫\s]/g, '');
+      
+      const lastComma = str.lastIndexOf(',');
+      const lastDot = str.lastIndexOf('.');
+      
+      // Auto-detect: if comma appears after last dot, comma is decimal separator (Vietnamese)
+      const isCommaDecimal = lastComma > lastDot;
+      
+      if (isCommaDecimal) {
+        // Vietnamese: 1.200.000,50 → 1200000.50
+        str = str.replace(/\./g, '').replace(',', '.');
+      } else {
+        // International: 1,200,000.50 → 1200000.50
+        str = str.replace(/,/g, '');
+      }
+      
+      const n = parseFloat(str);
       return isNaN(n) ? null : n;
     };
 
