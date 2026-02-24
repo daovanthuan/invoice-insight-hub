@@ -26,8 +26,8 @@ const UserDashboard = () => {
     const pendingInvoices = invoices.filter((inv) => inv.status === 'pending').length;
     const rejectedInvoices = invoices.filter((inv) => inv.status === 'rejected').length;
     
-    // Chỉ tính chi tiêu từ hóa đơn không bị từ chối
-    const validInvoices = invoices.filter((inv) => inv.status !== 'rejected');
+    // Chỉ tính chi tiêu từ hóa đơn không bị từ chối hoặc đã hủy
+    const validInvoices = invoices.filter((inv) => inv.status !== 'rejected' && inv.status !== 'cancelled');
     
     // Group totals by normalized currency
     const totalsByCurrency = validInvoices.reduce((acc: Record<string, number>, inv) => {
