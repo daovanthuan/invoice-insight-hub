@@ -333,18 +333,34 @@ serve(async (req) => {
       });
     }
 
-    // Calculate a simple confidence score based on how many core fields were extracted
+    // Calculate weighted confidence score
     const coreData = (extractedData as any)?.core || {};
-    const coreFields = [
-      'vendor_name', 'vendor_tax_id', 'buyer_name', 'buyer_tax_id',
-      'invoice_id', 'invoice_date', 'total_amount', 'subtotal',
-      'tax_amount', 'tax_rate', 'currency', 'payment_method',
+    const weightedFields: [string, number][] = [
+      // Critical fields (weight 3)
+      ['total_amount', 3],
+      ['invoice_id', 3],
+      ['vendor_name', 3],
+      ['invoice_date', 2.5],
+      // Important fields (weight 2)
+      ['vendor_tax_id', 2],
+      ['buyer_name', 2],
+      ['subtotal', 2],
+      ['tax_amount', 1.5],
+      // Standard fields (weight 1)
+      ['buyer_tax_id', 1],
+      ['tax_rate', 1],
+      ['currency', 1],
+      ['payment_method', 0.5],
     ];
-    const filledFields = coreFields.filter(f => {
-      const val = coreData[f];
-      return val !== undefined && val !== null && val !== '';
-    }).length;
-    const confidenceScore = Math.round((filledFields / coreFields.length) * 100) / 100;
+    const totalWeight = weightedFields.reduce((sum, [, w]) => sum + w, 0);
+    const earnedWeight = weightedFields.reduce((sum, [field, w]) => {
+      const val = coreData[field];
+      return sum + ((val !== undefined && val !== null && val !== '') ? w : 0);
+    }, 0);
+    // Also check line_items presence as a bonus
+    const hasLineItems = Array.isArray(coreData.line_items) && coreData.line_items.length > 0;
+    const lineItemBonus = hasLineItems ? 0.05 : 0;
+    const confidenceScore = Math.min(1, Math.round(((earnedWeight / totalWeight) + lineItemBonus) * 100) / 100);
 
     return new Response(JSON.stringify({ success: true, data: extractedData, confidence_score: confidenceScore }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
