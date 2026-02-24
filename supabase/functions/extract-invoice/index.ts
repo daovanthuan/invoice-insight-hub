@@ -333,7 +333,7 @@ serve(async (req) => {
       });
     }
 
-    // Calculate weighted confidence score
+    // Calculate weighted confidence score with math validation
     const coreData = (extractedData as any)?.core || {};
     const weightedFields: [string, number][] = [
       // Critical fields (weight 3)
@@ -357,12 +357,82 @@ serve(async (req) => {
       const val = coreData[field];
       return sum + ((val !== undefined && val !== null && val !== '') ? w : 0);
     }, 0);
-    // Also check line_items presence as a bonus
+    // Line items bonus
     const hasLineItems = Array.isArray(coreData.line_items) && coreData.line_items.length > 0;
     const lineItemBonus = hasLineItems ? 0.05 : 0;
-    const confidenceScore = Math.min(1, Math.round(((earnedWeight / totalWeight) + lineItemBonus) * 100) / 100);
 
-    return new Response(JSON.stringify({ success: true, data: extractedData, confidence_score: confidenceScore }), {
+    // --- Math Validation ---
+    const parseNum = (v: unknown): number | null => {
+      if (v === undefined || v === null || v === '') return null;
+      const s = String(v).replace(/[,.\s]/g, (m) => m === ',' ? '' : m).replace(/\./g, '');
+      // Handle Vietnamese format: 1.200.000 or international 1,200,000
+      const cleaned = String(v).replace(/\s/g, '').replace(/\./g, '').replace(/,/g, '');
+      const n = Number(cleaned);
+      return isNaN(n) ? null : n;
+    };
+
+    let mathPenalty = 0;
+    const mathWarnings: string[] = [];
+
+    // Check 1: Subtotal + Tax Amount ≈ Total Amount
+    const subtotalNum = parseNum(coreData.subtotal);
+    const taxAmountNum = parseNum(coreData.tax_amount);
+    const totalAmountNum = parseNum(coreData.total_amount);
+
+    if (subtotalNum !== null && taxAmountNum !== null && totalAmountNum !== null && totalAmountNum > 0) {
+      const expectedTotal = subtotalNum + taxAmountNum;
+      const diff = Math.abs(expectedTotal - totalAmountNum);
+      const tolerance = totalAmountNum * 0.02; // 2% tolerance
+      if (diff > tolerance) {
+        mathPenalty += 0.15;
+        mathWarnings.push(`Subtotal(${subtotalNum}) + Tax(${taxAmountNum}) = ${expectedTotal} ≠ Total(${totalAmountNum}), diff=${diff}`);
+      }
+    }
+
+    // Check 2: Sum of line item amounts ≈ Subtotal
+    if (hasLineItems && subtotalNum !== null && subtotalNum > 0) {
+      const lineItemsSum = (coreData.line_items as any[]).reduce((sum: number, item: any) => {
+        const amt = parseNum(item.amount);
+        return sum + (amt ?? 0);
+      }, 0);
+      if (lineItemsSum > 0) {
+        const diff = Math.abs(lineItemsSum - subtotalNum);
+        const tolerance = subtotalNum * 0.02;
+        if (diff > tolerance) {
+          mathPenalty += 0.10;
+          mathWarnings.push(`LineItems sum(${lineItemsSum}) ≠ Subtotal(${subtotalNum}), diff=${diff}`);
+        }
+      }
+    }
+
+    // Check 3: Line item quantity * unit_price ≈ amount (spot check)
+    if (hasLineItems) {
+      let itemMismatchCount = 0;
+      for (const item of coreData.line_items as any[]) {
+        const qty = parseNum(item.quantity);
+        const price = parseNum(item.unit_price);
+        const amt = parseNum(item.amount);
+        if (qty !== null && price !== null && amt !== null && amt > 0) {
+          const expected = qty * price;
+          const diff = Math.abs(expected - amt);
+          if (diff > amt * 0.02) {
+            itemMismatchCount++;
+          }
+        }
+      }
+      if (itemMismatchCount > 0) {
+        mathPenalty += Math.min(0.10, itemMismatchCount * 0.03);
+        mathWarnings.push(`${itemMismatchCount} line item(s) have qty*price ≠ amount`);
+      }
+    }
+
+    if (mathWarnings.length > 0) {
+      console.log("Math validation warnings:", mathWarnings);
+    }
+
+    const confidenceScore = Math.min(1, Math.max(0, Math.round(((earnedWeight / totalWeight) + lineItemBonus - mathPenalty) * 100) / 100));
+
+    return new Response(JSON.stringify({ success: true, data: extractedData, confidence_score: confidenceScore, math_warnings: mathWarnings.length > 0 ? mathWarnings : undefined }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
