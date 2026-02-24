@@ -190,7 +190,7 @@ export default function UploadPage() {
           lookup_code: core.lookup_code || null,
           lookup_url: core.lookup_url || null,
           exchange_rate: parseNumber(core.exchange_rate),
-          status: 'processed',
+          status: (confidenceScore !== null && confidenceScore >= 0.7) ? 'approved' : 'pending',
           confidence_score: confidenceScore,
           original_file_path: filePath || null,
           source_zip_name: sourceZipName || null,
