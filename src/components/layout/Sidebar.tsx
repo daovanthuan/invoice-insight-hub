@@ -35,7 +35,11 @@ const userNavItems = [
   { icon: Settings, label: 'Cài đặt', path: '/settings' },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  onNavigate?: () => void;
+}
+
+export function Sidebar({ onNavigate }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
@@ -78,7 +82,7 @@ export function Sidebar() {
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
-              <Link key={item.path} to={item.path}>
+              <Link key={item.path} to={item.path} onClick={onNavigate}>
                 <motion.div
                   whileHover={{ x: 4 }}
                   whileTap={{ scale: 0.98 }}

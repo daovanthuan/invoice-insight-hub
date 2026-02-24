@@ -70,12 +70,15 @@ export default function InvoicesPage() {
   const [editItems, setEditItems] = useState<InvoiceItem[]>([]);
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   const clearAllFilters = () => {
     setSearchTerm('');
     setStatusFilter('all');
     setDateFrom(undefined);
     setDateTo(undefined);
+    setCurrentPage(1);
   };
 
   const hasActiveFilters = searchTerm || statusFilter !== 'all' || dateFrom || dateTo;
@@ -420,17 +423,49 @@ export default function InvoicesPage() {
                 )
               ))}
 
-              {/* Single invoices in one table */}
-              {groupedInvoices.some(g => g.type === 'single') && (
-                <div className="glass rounded-xl overflow-hidden">
-                  <Table>
-                    {tableHeaders}
-                    <TableBody>
-                      {groupedInvoices.map((g, i) => g.type === 'single' && renderInvoiceRow(g.invoice, i))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
+              {/* Single invoices with pagination */}
+              {(() => {
+                const singleInvoices = groupedInvoices.filter(g => g.type === 'single');
+                if (singleInvoices.length === 0) return null;
+                const totalPages = Math.ceil(singleInvoices.length / PAGE_SIZE);
+                const paginatedSingles = singleInvoices.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+                return (
+                  <div className="space-y-3">
+                    <div className="glass rounded-xl overflow-hidden">
+                      <Table>
+                        {tableHeaders}
+                        <TableBody>
+                          {paginatedSingles.map((g, i) => g.type === 'single' && renderInvoiceRow(g.invoice, (currentPage - 1) * PAGE_SIZE + i))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-center gap-2 py-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                        >
+                          Trước
+                        </Button>
+                        <span className="text-sm text-muted-foreground">
+                          Trang {currentPage} / {totalPages}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                        >
+                          Sau
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </motion.div>

@@ -1,6 +1,15 @@
 import { motion } from 'framer-motion';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 
+const STATUS_LABELS: Record<string, string> = {
+  processed: 'Đã xử lý',
+  approved: 'Đã duyệt',
+  pending: 'Đang chờ',
+  rejected: 'Từ chối',
+  cancelled: 'Đã hủy',
+  draft: 'Nháp',
+};
+
 interface StatusData {
   status: string;
   count: number;
@@ -28,8 +37,8 @@ export function StatusPieChart({ data }: StatusPieChartProps) {
       className="glass rounded-xl p-6"
     >
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-foreground">Invoice Status</h3>
-        <p className="text-sm text-muted-foreground">Distribution by status</p>
+        <h3 className="text-lg font-semibold text-foreground">Trạng thái hóa đơn</h3>
+        <p className="text-sm text-muted-foreground">Phân bố theo trạng thái</p>
       </div>
 
       <div className="h-[250px]">
@@ -56,12 +65,13 @@ export function StatusPieChart({ data }: StatusPieChartProps) {
                 borderRadius: '8px',
                 color: 'hsl(var(--popover-foreground))',
               }}
+              formatter={(value: number, name: string) => [value, STATUS_LABELS[name] || name]}
             />
             <Legend
               verticalAlign="bottom"
               height={36}
               formatter={(value) => (
-                <span style={{ color: 'hsl(var(--foreground))' }}>{value}</span>
+                <span style={{ color: 'hsl(var(--foreground))' }}>{STATUS_LABELS[value] || value}</span>
               )}
             />
           </PieChart>
