@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils';
 import { useInvoiceExtraction } from '@/hooks/useInvoiceExtraction';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useCreateNotification } from '@/hooks/useCreateNotification';
+import { useDuplicateCheck } from '@/hooks/useDuplicateCheck';
 
 interface UploadedFile {
   id: string;
@@ -50,6 +51,7 @@ export default function UploadPage() {
   const { extractInvoice, isExtracting } = useInvoiceExtraction();
   const { createInvoice } = useInvoices();
   const { createNotification } = useCreateNotification();
+  const { checkDuplicate } = useDuplicateCheck();
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -113,7 +115,34 @@ export default function UploadPage() {
         return;
       }
 
+      // Check duplicate
       const core = extractedData.core;
+      const duplicateResult = await checkDuplicate(
+        core.invoice_id || null,
+        core.invoice_serial || null,
+        core.vendor_name || null,
+        core.invoice_date || null
+      );
+
+      if (duplicateResult.isDuplicate) {
+        const matchedText = duplicateResult.matchedFields.join(', ');
+        updateFileInEntries(uploadedFile.id, f => ({
+          ...f,
+          status: 'error',
+          error: `Hóa đơn trùng lặp (${matchedText})`,
+        }));
+        toast.warning(`Phát hiện hóa đơn trùng lặp: ${matchedText}`, {
+          description: uploadedFile.file.name,
+          duration: 6000,
+        });
+        await createNotification({
+          title: 'Hóa đơn trùng lặp',
+          message: `File "${uploadedFile.file.name}" trùng với hóa đơn đã tồn tại (${matchedText}).`,
+          type: 'warning',
+          link: '/invoices',
+        });
+        return;
+      }
       const lineItems = core.line_items || [];
       const processedLineItems = lineItems.map((item) => {
         const quantity = parseNumber(item.quantity);

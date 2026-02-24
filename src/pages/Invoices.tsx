@@ -6,7 +6,9 @@ import { Header } from '@/components/layout/Header';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useCreateNotification } from '@/hooks/useCreateNotification';
+import { useInvoicePreview } from '@/hooks/useInvoicePreview';
 import { Invoice, InvoiceItem } from '@/types/database';
+import { exportToExcel, exportToCSV } from '@/lib/exportInvoices';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Progress } from '@/components/ui/progress';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -27,7 +30,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Search, Filter, Eye, Download, FileText, Loader2, Pencil, Ban, CalendarIcon, X, ChevronRight, Archive, FolderOpen } from 'lucide-react';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Search, Filter, Eye, Download, FileText, Loader2, Pencil, Ban, CalendarIcon, X, ChevronRight, Archive, FolderOpen, CheckCircle2, XCircle, Image, FileSpreadsheet, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { InvoiceEditDialog } from '@/components/invoices/InvoiceEditDialog';
 import { supabase } from '@/integrations/supabase/client';
@@ -59,6 +65,7 @@ export default function InvoicesPage() {
   const { invoices, loading, fetchInvoiceItems, updateInvoice, fetchInvoices } = useInvoices();
   const { isAdmin } = useUserRole();
   const { createNotification } = useCreateNotification();
+  const { previewUrl, loadingPreview, getPreviewUrl, clearPreview } = useInvoicePreview();
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
@@ -71,6 +78,7 @@ export default function InvoicesPage() {
   const [cancelId, setCancelId] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [showPreview, setShowPreview] = useState(false);
   const PAGE_SIZE = 20;
 
   const clearAllFilters = () => {
@@ -97,6 +105,39 @@ export default function InvoicesPage() {
       type: 'warning',
       link: '/invoices',
     });
+  };
+
+  const handleApproveInvoice = async (invoiceId: string) => {
+    const inv = invoices.find(i => i.id === invoiceId);
+    await updateInvoice(invoiceId, { status: 'approved' });
+    toast.success('Đã duyệt hóa đơn');
+    await createNotification({
+      title: 'Hóa đơn đã được duyệt',
+      message: `Hóa đơn "${inv?.invoice_number || 'N/A'}" đã được phê duyệt.`,
+      type: 'success',
+      link: '/invoices',
+    });
+  };
+
+  const handleRejectInvoice = async (invoiceId: string) => {
+    const inv = invoices.find(i => i.id === invoiceId);
+    await updateInvoice(invoiceId, { status: 'rejected' });
+    toast.success('Đã từ chối hóa đơn');
+    await createNotification({
+      title: 'Hóa đơn đã bị từ chối',
+      message: `Hóa đơn "${inv?.invoice_number || 'N/A'}" đã bị từ chối.`,
+      type: 'warning',
+      link: '/invoices',
+    });
+  };
+
+  const handleViewPreview = async (filePath: string | null) => {
+    if (!filePath) {
+      toast.error('Không có file gốc');
+      return;
+    }
+    await getPreviewUrl(filePath);
+    setShowPreview(true);
   };
 
   const filteredInvoices = invoices.filter((invoice) => {
@@ -205,21 +246,7 @@ export default function InvoicesPage() {
     }
   };
 
-  const exportCSV = () => {
-    const headers = ['Invoice Number', 'Vendor', 'Date', 'Currency', 'Total', 'Status'];
-    const rows = filteredInvoices.map((inv) => [
-      inv.invoice_number || '', inv.vendor_name || '', inv.invoice_date || '',
-      inv.currency || '', String(inv.total_amount || ''), inv.status || '',
-    ]);
-    const csvContent = [headers, ...rows].map((row) => row.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'invoices.csv';
-    a.click();
-    URL.revokeObjectURL(url);
-  };
+  // Old exportCSV removed - using exportInvoices lib now
 
   const formatAmount = (amount: number | null) => {
     if (!amount) return '0';
@@ -262,6 +289,18 @@ export default function InvoicesPage() {
             {statusLabels[invoice.status] || invoice.status}
           </Badge>
         </TableCell>
+        <TableCell>
+          {invoice.confidence_score != null ? (
+            <div className="flex items-center gap-2">
+              <Progress value={invoice.confidence_score * 100} className={cn("h-2 w-16", invoice.confidence_score < 0.7 && "[&>div]:bg-warning")} />
+              <span className={cn("text-xs font-medium", invoice.confidence_score < 0.7 ? "text-warning" : "text-muted-foreground")}>
+                {Math.round(invoice.confidence_score * 100)}%
+              </span>
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">-</span>
+          )}
+        </TableCell>
         {isAdmin && (
           <>
             <TableCell className="text-sm text-muted-foreground">{invoice.created_by_profile?.user_code || '-'}</TableCell>
@@ -271,13 +310,28 @@ export default function InvoicesPage() {
           </>
         )}
         <TableCell className="text-right">
-          <div className="flex items-center justify-end gap-2">
-            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleViewInvoice(invoice); }}>
+          <div className="flex items-center justify-end gap-1">
+            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleViewInvoice(invoice); }} title="Xem chi tiết">
               <Eye className="h-4 w-4" />
             </Button>
+            {invoice.original_file_path && (
+              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleViewPreview(invoice.original_file_path); }} title="Xem file gốc" className="text-muted-foreground hover:text-primary">
+                <Image className="h-4 w-4" />
+              </Button>
+            )}
             {!isCancelled && (
               <>
-                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleEditInvoice(invoice); }} className="text-muted-foreground hover:text-primary">
+                {(invoice.status === 'processed' || invoice.status === 'pending') && (
+                  <>
+                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleApproveInvoice(invoice.id); }} className="text-muted-foreground hover:text-success" title="Duyệt">
+                      <CheckCircle2 className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleRejectInvoice(invoice.id); }} className="text-muted-foreground hover:text-destructive" title="Từ chối">
+                      <XCircle className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
+                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleEditInvoice(invoice); }} className="text-muted-foreground hover:text-primary" title="Sửa">
                   <Pencil className="h-4 w-4" />
                 </Button>
                 <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setCancelId(invoice.id); }} className="text-muted-foreground hover:text-warning" title="Hủy hóa đơn">
@@ -299,6 +353,7 @@ export default function InvoicesPage() {
         <TableHead className="text-muted-foreground">Ngày HĐ</TableHead>
         <TableHead className="text-muted-foreground">Tổng tiền</TableHead>
         <TableHead className="text-muted-foreground">Trạng thái</TableHead>
+        <TableHead className="text-muted-foreground">Độ tin cậy</TableHead>
         {isAdmin && (
           <>
             <TableHead className="text-muted-foreground">Người tạo</TableHead>
@@ -379,10 +434,24 @@ export default function InvoicesPage() {
               {filteredInvoices.length} / {invoices.length} hóa đơn
             </span>
 
-            <Button className="gap-2" onClick={exportCSV} disabled={filteredInvoices.length === 0}>
-              <Download className="h-4 w-4" />
-              Xuất CSV
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="gap-2" disabled={filteredInvoices.length === 0}>
+                  <Download className="h-4 w-4" />
+                  Xuất dữ liệu
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => exportToExcel(filteredInvoices)}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Xuất Excel (.xlsx)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => exportToCSV(filteredInvoices)}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Xuất CSV
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </motion.div>
 
@@ -482,6 +551,36 @@ export default function InvoicesPage() {
 
             {selectedInvoice && (
               <div className="space-y-6">
+                {/* Confidence Score + Preview Button */}
+                <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Độ tin cậy AI</p>
+                      {selectedInvoice.confidence_score != null ? (
+                        <div className="flex items-center gap-2 mt-1">
+                          <Progress value={selectedInvoice.confidence_score * 100} className={cn("h-2.5 w-24", selectedInvoice.confidence_score < 0.7 && "[&>div]:bg-warning")} />
+                          <span className={cn("text-sm font-semibold", selectedInvoice.confidence_score < 0.7 ? "text-warning" : selectedInvoice.confidence_score >= 0.9 ? "text-success" : "text-foreground")}>
+                            {Math.round(selectedInvoice.confidence_score * 100)}%
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Không có dữ liệu</span>
+                      )}
+                    </div>
+                    {selectedInvoice.confidence_score != null && selectedInvoice.confidence_score < 0.7 && (
+                      <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20">
+                        ⚠ Cần kiểm tra lại
+                      </Badge>
+                    )}
+                  </div>
+                  {selectedInvoice.original_file_path && (
+                    <Button variant="outline" size="sm" className="gap-2" onClick={() => handleViewPreview(selectedInvoice.original_file_path)} disabled={loadingPreview}>
+                      {loadingPreview ? <Loader2 className="h-4 w-4 animate-spin" /> : <Image className="h-4 w-4" />}
+                      Xem file gốc
+                    </Button>
+                  )}
+                </div>
+
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-3">
                     <h4 className="font-semibold text-primary">Thông tin nhà cung cấp</h4>
@@ -601,6 +700,31 @@ export default function InvoicesPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* File Preview Dialog */}
+        <Dialog open={showPreview} onOpenChange={(open) => { if (!open) { setShowPreview(false); clearPreview(); } }}>
+          <DialogContent className="max-w-4xl max-h-[90vh]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Image className="h-5 w-5 text-primary" />
+                Xem file gốc
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex items-center justify-center min-h-[400px]">
+              {loadingPreview ? (
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              ) : previewUrl ? (
+                previewUrl.includes('.pdf') || previewUrl.includes('application/pdf') ? (
+                  <iframe src={previewUrl} className="w-full h-[70vh] rounded-lg border border-border" />
+                ) : (
+                  <img src={previewUrl} alt="Invoice preview" className="max-w-full max-h-[70vh] rounded-lg object-contain" />
+                )
+              ) : (
+                <p className="text-muted-foreground">Không thể tải file</p>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <InvoiceEditDialog
           invoice={editInvoice}
