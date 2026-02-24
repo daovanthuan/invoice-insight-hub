@@ -17,6 +17,8 @@ const CURRENCY_MAP: Record<string, string> = {
   'vnd': 'VND',
   'vnđ': 'VND',
   'đ': 'VND',
+  '₫': 'VND',
+  'đồng': 'VND',
   'dong': 'VND',
   
   // EUR variations
