@@ -81,7 +81,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter basename="/invoice-insight-hub">
+          <BrowserRouter>
             <Routes>
 
               <Route path="/" element={<Navigate to="/auth" replace />} />
