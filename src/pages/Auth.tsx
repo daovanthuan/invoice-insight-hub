@@ -51,13 +51,13 @@ const Auth = () => {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
-        navigate("/");
+        navigate("/dashboard");
       }
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        navigate("/");
+        navigate("/dashboard");
       }
     });
 
@@ -223,7 +223,7 @@ const Auth = () => {
       }
 
       toast.success("Đăng nhập thành công!");
-      navigate("/");
+      navigate("/dashboard");
     } catch (error) {
       console.error('Sign in error:', error);
       toast.error("Đã xảy ra lỗi. Vui lòng thử lại.");
