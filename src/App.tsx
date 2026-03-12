@@ -81,16 +81,25 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
+          <BrowserRouter basename="/invoice-insight-hub">
             <Routes>
+
+              <Route path="/" element={<Navigate to="/auth" replace />} />
+
               <Route path="/auth" element={<Auth />} />
-              <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+
+              <Route path="/dashboard" element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }/>
+
               <Route path="/invoices" element={<ProtectedRoute><InvoicesPage /></ProtectedRoute>} />
               <Route path="/upload" element={<ProtectedRoute><UploadPage /></ProtectedRoute>} />
               <Route path="/analytics" element={<AdminRoute><AnalyticsPage /></AdminRoute>} />
               <Route path="/users" element={<AdminRoute><UserManagement /></AdminRoute>} />
               <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-              <Route path="*" element={<NotFound />} />
+
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
