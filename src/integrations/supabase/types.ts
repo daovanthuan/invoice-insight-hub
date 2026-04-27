@@ -14,6 +14,129 @@ export type Database = {
   }
   public: {
     Tables: {
+      broker_invoices: {
+        Row: {
+          account_no: string | null
+          account_no_buy: string | null
+          account_no_sell: string | null
+          amount_buy: number | null
+          amount_sell: number | null
+          client_name: string | null
+          confidence_score: number | null
+          created_at: string
+          created_by: string | null
+          currency: string | null
+          currency_buy: string | null
+          currency_sell: string | null
+          description: string | null
+          dividend_rate: number | null
+          ex_date: string | null
+          extend: Json | null
+          gross_amount: number | null
+          id: string
+          net_amount: number | null
+          original_file_path: string | null
+          owner_id: string
+          payment_date: string | null
+          rate: number | null
+          raw_json: Json | null
+          securities_id: string | null
+          security_name: string | null
+          settlement_date: string | null
+          source_zip_name: string | null
+          status: Database["public"]["Enums"]["broker_invoice_status"]
+          trade_date: string | null
+          transaction_type:
+            | Database["public"]["Enums"]["broker_transaction_type"]
+            | null
+          units: number | null
+          updated_at: string
+          updated_by: string | null
+          wht_amount: number | null
+          wht_rate: number | null
+        }
+        Insert: {
+          account_no?: string | null
+          account_no_buy?: string | null
+          account_no_sell?: string | null
+          amount_buy?: number | null
+          amount_sell?: number | null
+          client_name?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          currency_buy?: string | null
+          currency_sell?: string | null
+          description?: string | null
+          dividend_rate?: number | null
+          ex_date?: string | null
+          extend?: Json | null
+          gross_amount?: number | null
+          id?: string
+          net_amount?: number | null
+          original_file_path?: string | null
+          owner_id: string
+          payment_date?: string | null
+          rate?: number | null
+          raw_json?: Json | null
+          securities_id?: string | null
+          security_name?: string | null
+          settlement_date?: string | null
+          source_zip_name?: string | null
+          status?: Database["public"]["Enums"]["broker_invoice_status"]
+          trade_date?: string | null
+          transaction_type?:
+            | Database["public"]["Enums"]["broker_transaction_type"]
+            | null
+          units?: number | null
+          updated_at?: string
+          updated_by?: string | null
+          wht_amount?: number | null
+          wht_rate?: number | null
+        }
+        Update: {
+          account_no?: string | null
+          account_no_buy?: string | null
+          account_no_sell?: string | null
+          amount_buy?: number | null
+          amount_sell?: number | null
+          client_name?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          created_by?: string | null
+          currency?: string | null
+          currency_buy?: string | null
+          currency_sell?: string | null
+          description?: string | null
+          dividend_rate?: number | null
+          ex_date?: string | null
+          extend?: Json | null
+          gross_amount?: number | null
+          id?: string
+          net_amount?: number | null
+          original_file_path?: string | null
+          owner_id?: string
+          payment_date?: string | null
+          rate?: number | null
+          raw_json?: Json | null
+          securities_id?: string | null
+          security_name?: string | null
+          settlement_date?: string | null
+          source_zip_name?: string | null
+          status?: Database["public"]["Enums"]["broker_invoice_status"]
+          trade_date?: string | null
+          transaction_type?:
+            | Database["public"]["Enums"]["broker_transaction_type"]
+            | null
+          units?: number | null
+          updated_at?: string
+          updated_by?: string | null
+          wht_amount?: number | null
+          wht_rate?: number | null
+        }
+        Relationships: []
+      }
       invoice_items: {
         Row: {
           amount: number | null
@@ -633,6 +756,20 @@ export type Database = {
       is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
+      broker_invoice_status:
+        | "pending"
+        | "processing"
+        | "completed"
+        | "failed"
+        | "cancelled"
+      broker_transaction_type:
+        | "BUY"
+        | "SELL"
+        | "DIVIDEND"
+        | "INTEREST"
+        | "FX"
+        | "TRANSFER"
+        | "OTHER"
       entity_status: "active" | "inactive" | "deleted"
       file_status: "pending" | "processing" | "completed" | "error"
       gender_type: "male" | "female" | "other"
@@ -771,6 +908,22 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      broker_invoice_status: [
+        "pending",
+        "processing",
+        "completed",
+        "failed",
+        "cancelled",
+      ],
+      broker_transaction_type: [
+        "BUY",
+        "SELL",
+        "DIVIDEND",
+        "INTEREST",
+        "FX",
+        "TRANSFER",
+        "OTHER",
+      ],
       entity_status: ["active", "inactive", "deleted"],
       file_status: ["pending", "processing", "completed", "error"],
       gender_type: ["male", "female", "other"],
