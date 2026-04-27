@@ -25,6 +25,9 @@ import { useInvoiceExtraction } from '@/hooks/useInvoiceExtraction';
 import { useInvoices } from '@/hooks/useInvoices';
 import { useCreateNotification } from '@/hooks/useCreateNotification';
 import { useDuplicateCheck } from '@/hooks/useDuplicateCheck';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { BrokerUpload } from '@/components/upload/BrokerUpload';
+import { Briefcase, Receipt } from 'lucide-react';
 
 interface UploadedFile {
   id: string;
@@ -402,6 +405,19 @@ export default function UploadPage() {
       <Header title="Tải Lên Hóa Đơn" subtitle="Upload ảnh, PDF hoặc file ZIP chứa hóa đơn để AI trích xuất dữ liệu" />
 
       <div className="p-6">
+        <Tabs defaultValue="standard" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="standard" className="gap-2">
+              <Receipt className="h-4 w-4" />
+              Hóa đơn thường
+            </TabsTrigger>
+            <TabsTrigger value="broker" className="gap-2">
+              <Briefcase className="h-4 w-4" />
+              Hóa đơn Broker
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="standard">
         {/* Upload Zone */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
           <label
@@ -501,6 +517,12 @@ export default function UploadPage() {
             </div>
           ))}
         </motion.div>
+          </TabsContent>
+
+          <TabsContent value="broker">
+            <BrokerUpload />
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   );
