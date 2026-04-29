@@ -6,7 +6,10 @@ export const useInvoicePreview = () => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
 
-  const getPreviewUrl = async (filePath: string | null): Promise<string | null> => {
+  const getPreviewUrl = async (
+    filePath: string | null,
+    bucket: string = "invoices"
+  ): Promise<string | null> => {
     if (!filePath) {
       toast.error("Không có file gốc cho hóa đơn này");
       return null;
@@ -15,7 +18,7 @@ export const useInvoicePreview = () => {
     setLoadingPreview(true);
     try {
       const { data, error } = await supabase.storage
-        .from("invoices")
+        .from(bucket)
         .createSignedUrl(filePath, 3600); // 1 hour
 
       if (error) {

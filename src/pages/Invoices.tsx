@@ -38,6 +38,9 @@ import { cn } from '@/lib/utils';
 import { InvoiceEditDialog } from '@/components/invoices/InvoiceEditDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Receipt, Briefcase } from 'lucide-react';
+import { BrokerInvoicesPanel } from '@/components/invoices/BrokerInvoicesPanel';
 
 const statusStyles: Record<string, string> = {
   processed: 'bg-success/10 text-success border-success/20',
@@ -372,6 +375,19 @@ export default function InvoicesPage() {
       <Header title="Hóa Đơn" subtitle="Quản lý và xem hóa đơn đã trích xuất" />
 
       <div className="p-6">
+        <Tabs defaultValue="standard" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="standard" className="gap-2">
+              <Receipt className="h-4 w-4" />
+              Hóa đơn thường
+            </TabsTrigger>
+            <TabsTrigger value="broker" className="gap-2">
+              <Briefcase className="h-4 w-4" />
+              Hóa đơn Broker
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="standard">
         {/* Filters */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 space-y-4">
           <div className="flex flex-wrap items-center gap-3">
@@ -733,6 +749,12 @@ export default function InvoicesPage() {
           onClose={() => { setEditInvoice(null); setEditItems([]); }}
           onSave={handleSaveInvoice}
         />
+          </TabsContent>
+
+          <TabsContent value="broker">
+            <BrokerInvoicesPanel />
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   );

@@ -1,6 +1,9 @@
 // Database enums
 export type EntityStatus = 'active' | 'inactive' | 'deleted';
 export type InvoiceStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'processed' | 'cancelled';
+export type BrokerInvoiceStatus = 'pending' | 'completed' | 'rejected' | 'cancelled';
+export type BrokerTransactionType =
+  | 'BUY' | 'SELL' | 'DIVIDEND' | 'INTEREST' | 'FX' | 'TRANSFER' | 'OTHER';
 export type GenderType = 'male' | 'female' | 'other';
 export type NotificationType = 'info' | 'warning' | 'error' | 'success';
 
@@ -126,6 +129,55 @@ export interface Notification {
   link: string | null;
   metadata: Record<string, unknown> | null;
   created_at: string;
+}
+
+// Broker Invoice
+export interface BrokerInvoice {
+  id: string;
+  status: BrokerInvoiceStatus;
+  confidence_score: number | null;
+
+  client_name: string | null;
+  account_no: string | null;
+  description: string | null;
+  securities_id: string | null;
+  security_name: string | null;
+  units: number | null;
+  transaction_type: BrokerTransactionType | null;
+
+  trade_date: string | null;
+  settlement_date: string | null;
+  ex_date: string | null;
+  payment_date: string | null;
+
+  currency: string | null;
+  gross_amount: number | null;
+  net_amount: number | null;
+  dividend_rate: number | null;
+  wht_rate: number | null;
+  wht_amount: number | null;
+
+  currency_buy: string | null;
+  currency_sell: string | null;
+  amount_buy: number | null;
+  amount_sell: number | null;
+  rate: number | null;
+  account_no_buy: string | null;
+  account_no_sell: string | null;
+
+  original_file_path: string | null;
+  source_zip_name: string | null;
+  raw_json: Record<string, unknown> | null;
+  extend: Record<string, unknown> | null;
+
+  owner_id: string;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+
+  created_by_profile?: { user_code: string | null } | null;
+  updated_by_profile?: { user_code: string | null } | null;
 }
 
 // User Settings
