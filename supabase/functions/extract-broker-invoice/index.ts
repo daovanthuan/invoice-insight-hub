@@ -6,6 +6,8 @@ const corsHeaders = {
 };
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") ?? "";
+const BROKER_AI_API_URL = Deno.env.get("BROKER_AI_API_URL") ?? "";
+const BROKER_AI_API_KEY = Deno.env.get("BROKER_AI_API_KEY") ?? "";
 
 const SYSTEM_PROMPT = `You are an AI that extracts BROKER / SECURITIES / FX confirmation notes (advice slips, contract notes, dividend notices, FX confirmations) issued by banks or brokers.
 
@@ -86,14 +88,57 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
-
     const { fileBase64, mimeType, fileName } = await req.json();
     if (!fileBase64 || !mimeType) {
       return new Response(JSON.stringify({ error: "Missing fileBase64 or mimeType" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // ===== Try Custom AI (FastAPI / LayoutLMv3 on HF Spaces) first =====
+    if (BROKER_AI_API_URL) {
+      try {
+        const url = BROKER_AI_API_URL.replace(/\/+$/, "") + "/extract";
+        console.log("Calling broker AI:", url);
+        const customResp = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(BROKER_AI_API_KEY ? { Authorization: `Bearer ${BROKER_AI_API_KEY}` } : {}),
+          },
+          body: JSON.stringify({ image_base64: fileBase64, mime_type: mimeType, file_name: fileName }),
+          signal: AbortSignal.timeout(120_000),
+        });
+
+        if (customResp.ok) {
+          const cj = await customResp.json();
+          const dataObj = cj?.data ?? cj;
+          if (dataObj && typeof dataObj === "object") {
+            const out: Record<string, any> = {};
+            for (const f of FIELDS) out[f] = dataObj[f] ?? "";
+            const extend: Record<string, any> = (dataObj.extend && typeof dataObj.extend === "object") ? dataObj.extend : {};
+            for (const [k, v] of Object.entries(dataObj)) {
+              if (!FIELDS.includes(k) && k !== "extend" && v !== "" && v !== null && v !== undefined) {
+                extend[k] = v;
+              }
+            }
+            const confidence_score = typeof cj?.confidence === "number" ? cj.confidence : calcConfidence(out);
+            return new Response(
+              JSON.stringify({ data: out, extend, confidence_score, raw: dataObj, source: "custom_ai" }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        } else {
+          const errTxt = await customResp.text();
+          console.error("Custom broker AI failed:", customResp.status, errTxt);
+        }
+      } catch (err) {
+        console.error("Custom broker AI exception, falling back to Gemini:", err);
+      }
+    }
+
+    // ===== Fallback: Gemini via Lovable AI Gateway =====
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const isPdf = mimeType === "application/pdf";
     const userContent = isPdf
@@ -156,7 +201,7 @@ serve(async (req) => {
     const confidence_score = calcConfidence(out);
 
     return new Response(
-      JSON.stringify({ data: out, extend, confidence_score, raw: parsed }),
+      JSON.stringify({ data: out, extend, confidence_score, raw: parsed, source: "gemini" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
