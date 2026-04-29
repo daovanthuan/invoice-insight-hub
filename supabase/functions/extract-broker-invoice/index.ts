@@ -201,7 +201,7 @@ serve(async (req) => {
     const confidence_score = calcConfidence(out);
 
     return new Response(
-      JSON.stringify({ data: out, extend, confidence_score, raw: parsed }),
+      JSON.stringify({ data: out, extend, confidence_score, raw: parsed, source: "gemini" }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
