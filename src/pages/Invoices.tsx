@@ -749,6 +749,12 @@ export default function InvoicesPage() {
           onClose={() => { setEditInvoice(null); setEditItems([]); }}
           onSave={handleSaveInvoice}
         />
+          </TabsContent>
+
+          <TabsContent value="broker">
+            <BrokerInvoicesPanel />
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   );
