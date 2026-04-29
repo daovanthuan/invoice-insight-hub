@@ -16,7 +16,7 @@ import {
   CheckCircle2,
   Loader2,
   AlertCircle,
-  Briefcase,
+  Archive,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBrokerExtraction, BrokerExtractionResult } from "@/hooks/useBrokerExtraction";
@@ -327,21 +327,22 @@ export function BrokerUpload() {
             isDragging ? "border-primary bg-primary/5 scale-[1.02]" : "border-border bg-muted/20 hover:bg-muted/40 hover:border-muted-foreground/50"
           )}
         >
-          <div className="flex flex-col items-center justify-center py-6">
+          <motion.div animate={{ scale: isDragging ? 1.1 : 1 }} className="flex flex-col items-center justify-center py-6">
             <div className={cn("mb-4 rounded-full p-4 transition-colors", isDragging ? "bg-primary/20" : "bg-muted")}>
-              <Briefcase className={cn("h-10 w-10 transition-colors", isDragging ? "text-primary" : "text-muted-foreground")} />
+              <UploadIcon className={cn("h-10 w-10 transition-colors", isDragging ? "text-primary" : "text-muted-foreground")} />
             </div>
             <p className="mb-2 text-lg font-semibold text-foreground">
               {isDragging ? "Thả file vào đây" : "Kéo & thả hóa đơn Broker"}
             </p>
-            <p className="text-sm text-muted-foreground mb-1">
-              Ảnh (PNG, JPG, WEBP), PDF, ZIP nhiều file, Excel/CSV
+            <p className="text-sm text-muted-foreground mb-4">
+              hoặc click để chọn file (PNG, JPG, WEBP, PDF, ZIP)
             </p>
-            <p className="text-xs text-muted-foreground mb-4">
-              Tự lưu nếu độ tin cậy ≥ 85%, ngược lại sẽ mở form để bạn xem lại
-            </p>
-            <Button variant="outline" className="pointer-events-none">Chọn file Broker</Button>
-          </div>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
+              <Archive className="h-4 w-4" />
+              <span>Hỗ trợ file ZIP chứa nhiều hóa đơn</span>
+            </div>
+            <Button variant="outline" className="pointer-events-none">Chọn File</Button>
+          </motion.div>
           <input
             id="broker-upload"
             type="file"
@@ -365,30 +366,42 @@ export function BrokerUpload() {
             exit={{ opacity: 0, y: -20 }}
             className="glass rounded-xl p-6"
           >
-            <h3 className="text-lg font-semibold text-foreground mb-4">
-              File Broker ({files.length})
-            </h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-foreground">
+                File đã tải ({files.length})
+              </h3>
+            </div>
             <div className="space-y-3">
-              {files.map((f) => (
-                <div key={f.id} className="flex items-center gap-3 rounded-lg bg-muted/20 p-3">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 shrink-0">
-                    <FileText className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{f.file.name}</p>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      {statusIcon(f.status)}
-                      <span className={cn("text-xs", f.status === "error" ? "text-destructive" : "text-muted-foreground")}>
-                        {statusText(f)}
-                      </span>
+              {files.map((f, index) => (
+                <motion.div
+                  key={f.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="flex items-center gap-2"
+                >
+                  <div className="flex-1 flex items-center gap-3 rounded-lg bg-muted/20 p-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 shrink-0">
+                      <FileText className="h-4 w-4 text-primary" />
                     </div>
-                    {(f.status === "uploading" || f.status === "processing") && (
-                      <Progress value={f.progress} className="mt-1.5 h-1" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate">{f.file.name}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        {statusIcon(f.status)}
+                        <span className={cn("text-xs", f.status === "error" ? "text-destructive" : "text-muted-foreground")}>
+                          {statusText(f)}
+                        </span>
+                      </div>
+                      {(f.status === "uploading" || f.status === "processing") && (
+                        <Progress value={f.progress} className="mt-1.5 h-1" />
+                      )}
+                    </div>
+                    {f.status === "review" && (
+                      <Button size="sm" onClick={() => openReview(f)}>Xem lại</Button>
                     )}
+                    <span className="text-xs text-muted-foreground shrink-0">{(f.file.size / 1024).toFixed(1)} KB</span>
                   </div>
-                  {f.status === "review" && (
-                    <Button size="sm" onClick={() => openReview(f)}>Xem lại</Button>
-                  )}
                   <Button
                     variant="ghost" size="icon"
                     onClick={() => remove(f.id)}
@@ -397,7 +410,7 @@ export function BrokerUpload() {
                   >
                     <X className="h-4 w-4" />
                   </Button>
-                </div>
+                </motion.div>
               ))}
             </div>
           </motion.div>
