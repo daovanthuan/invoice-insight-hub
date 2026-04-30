@@ -29,7 +29,7 @@ interface BrokerFile {
 }
 
 const TX_TYPES = ["BUY", "SELL", "DIVIDEND", "INTEREST", "FX", "TRANSFER", "OTHER"];
-const AUTO_SAVE_THRESHOLD = 0.85;
+const AUTO_SAVE_THRESHOLD = 0.75;
 
 const VALID_IMAGE_PDF = ["image/png", "image/jpeg", "image/jpg", "image/webp", "application/pdf"];
 

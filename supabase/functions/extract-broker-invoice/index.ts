@@ -68,20 +68,117 @@ function parseJsonFromAI(text: string): any {
   return null;
 }
 
-function calcConfidence(data: any): number {
-  const weights: [string, number][] = [
+// Helpers cho confidence
+const has = (v: any) => v !== undefined && v !== null && String(v).trim() !== "";
+const num = (v: any): number | null => {
+  if (!has(v)) return null;
+  const n = parseFloat(String(v).replace(/,/g, ""));
+  return isNaN(n) ? null : n;
+};
+const isISODate = (v: any) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
+const isCurrency = (v: any) => typeof v === "string" && /^[A-Z]{3}$/.test(v.trim());
+
+// Trọng số field theo từng loại giao dịch — chỉ tính field thật sự liên quan
+const FIELD_WEIGHTS_BY_TYPE: Record<string, Array<[string, number]>> = {
+  BUY: [
     ["transaction_type", 3], ["client_name", 2], ["currency", 2],
-    ["trade_date", 2], ["settlement_date", 1.5], ["payment_date", 1.5],
-    ["securities_id", 2], ["security_name", 2], ["account_no", 1.5],
-    ["gross_amount", 2.5], ["net_amount", 2.5], ["units", 1],
-    ["wht_amount", 1], ["rate", 1],
-  ];
+    ["trade_date", 2.5], ["settlement_date", 1.5],
+    ["securities_id", 2.5], ["security_name", 2], ["account_no", 1.5],
+    ["gross_amount", 2.5], ["net_amount", 2.5], ["units", 2],
+  ],
+  SELL: [
+    ["transaction_type", 3], ["client_name", 2], ["currency", 2],
+    ["trade_date", 2.5], ["settlement_date", 1.5],
+    ["securities_id", 2.5], ["security_name", 2], ["account_no", 1.5],
+    ["gross_amount", 2.5], ["net_amount", 2.5], ["units", 2],
+  ],
+  DIVIDEND: [
+    ["transaction_type", 3], ["client_name", 2], ["currency", 2],
+    ["ex_date", 1.5], ["payment_date", 2],
+    ["securities_id", 2.5], ["security_name", 2], ["account_no", 1.5],
+    ["gross_amount", 2.5], ["net_amount", 2.5],
+    ["dividend_rate", 1], ["wht_amount", 1.5],
+  ],
+  INTEREST: [
+    ["transaction_type", 3], ["client_name", 2], ["currency", 2],
+    ["payment_date", 2], ["account_no", 1.5],
+    ["gross_amount", 2.5], ["net_amount", 2.5], ["wht_amount", 1.5],
+  ],
+  FX: [
+    ["transaction_type", 3], ["client_name", 2], ["trade_date", 2.5],
+    ["currency_buy", 2.5], ["currency_sell", 2.5],
+    ["amount_buy", 2.5], ["amount_sell", 2.5], ["rate", 2],
+    ["account_no_buy", 1.5], ["account_no_sell", 1.5],
+  ],
+  TRANSFER: [
+    ["transaction_type", 3], ["client_name", 2], ["currency", 2],
+    ["trade_date", 2.5], ["account_no", 2],
+    ["gross_amount", 2.5], ["net_amount", 2.5], ["description", 1],
+  ],
+  OTHER: [
+    ["transaction_type", 2], ["client_name", 2], ["currency", 2],
+    ["trade_date", 2], ["account_no", 1.5],
+    ["gross_amount", 2], ["net_amount", 2], ["description", 1.5],
+  ],
+};
+
+function calcConfidence(data: any): number {
+  if (!data) return 0;
+
+  const tx = String(data.transaction_type || "").toUpperCase();
+  const weights = FIELD_WEIGHTS_BY_TYPE[tx] || FIELD_WEIGHTS_BY_TYPE.OTHER;
+
+  // 1) Field coverage theo loại GD
   const total = weights.reduce((s, [, w]) => s + w, 0);
-  const earned = weights.reduce((s, [f, w]) => {
-    const v = data?.[f];
-    return s + (v !== undefined && v !== null && String(v).trim() !== "" ? w : 0);
-  }, 0);
-  return Math.min(1, +(earned / total).toFixed(3));
+  const earned = weights.reduce((s, [f, w]) => s + (has(data?.[f]) ? w : 0), 0);
+  let score = total > 0 ? earned / total : 0;
+
+  // 2) Format penalties
+  const dateFields = ["trade_date", "settlement_date", "ex_date", "payment_date"];
+  for (const df of dateFields) {
+    if (has(data?.[df]) && !isISODate(data[df])) score -= 0.05;
+  }
+  if (has(data?.currency) && !isCurrency(data.currency)) score -= 0.05;
+  if (tx === "FX") {
+    if (has(data?.currency_buy) && !isCurrency(data.currency_buy)) score -= 0.05;
+    if (has(data?.currency_sell) && !isCurrency(data.currency_sell)) score -= 0.05;
+  }
+
+  // 3) Numeric sanity: số tiền phải > 0
+  const amountFields = ["gross_amount", "net_amount", "amount_buy", "amount_sell"];
+  for (const af of amountFields) {
+    const n = num(data?.[af]);
+    if (n !== null && n <= 0) score -= 0.05;
+  }
+
+  // 4) Cross-field consistency bonus (cộng tối đa +0.10)
+  let bonus = 0;
+  const gross = num(data?.gross_amount);
+  const net = num(data?.net_amount);
+  const wht = num(data?.wht_amount) ?? 0;
+  if (gross !== null && net !== null && gross > 0) {
+    // gross - wht ≈ net (sai số <= 1%)
+    const diff = Math.abs(gross - wht - net);
+    if (diff / gross <= 0.01) bonus += 0.06;
+  }
+  if (tx === "BUY" || tx === "SELL") {
+    const units = num(data?.units);
+    const gp = num(data?.gross_amount);
+    if (units && gp && units > 0 && gp > 0) bonus += 0.04; // có cả units & gross
+  }
+  if (tx === "FX") {
+    const ab = num(data?.amount_buy);
+    const as_ = num(data?.amount_sell);
+    const rate = num(data?.rate);
+    if (ab && as_ && rate && rate > 0) {
+      // amount_sell ≈ amount_buy * rate (sai số <= 2%)
+      const expected = ab * rate;
+      if (expected > 0 && Math.abs(expected - as_) / expected <= 0.02) bonus += 0.08;
+    }
+  }
+
+  score = Math.max(0, Math.min(1, score + bonus));
+  return +score.toFixed(3);
 }
 
 serve(async (req) => {
