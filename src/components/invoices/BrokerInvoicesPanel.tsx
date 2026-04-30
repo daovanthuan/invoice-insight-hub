@@ -35,7 +35,7 @@ import { BrokerInvoice } from "@/types/database";
 import { toast } from "sonner";
 import {
   BROKER_FIELD_LABELS, getBrokerVisibleFields, formatBrokerValue,
-  BROKER_STATUS_LABELS, BROKER_STATUS_STYLES, BROKER_TX_TYPES,
+  BROKER_STATUS_LABELS, BROKER_STATUS_STYLES, BROKER_TX_TYPES, BROKER_TX_TYPE_LABELS,
 } from "@/lib/brokerFields";
 import { exportBrokerToExcel, exportBrokerToCSV } from "@/lib/exportInvoices";
 import { BrokerInvoiceDetailDialog } from "./BrokerInvoiceDetailDialog";
@@ -173,7 +173,9 @@ export function BrokerInvoicesPanel() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tất cả loại</SelectItem>
-              {BROKER_TX_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+              {BROKER_TX_TYPES.map((t) => (
+                <SelectItem key={t} value={t}>{BROKER_TX_TYPE_LABELS[t] || t}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
