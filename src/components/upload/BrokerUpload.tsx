@@ -4,10 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import JSZip from "jszip";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   Upload as UploadIcon,
@@ -25,7 +21,7 @@ import { useCreateNotification } from "@/hooks/useCreateNotification";
 interface BrokerFile {
   id: string;
   file: File;
-  status: "uploading" | "processing" | "review" | "completed" | "error";
+  status: "uploading" | "processing" | "completed" | "pending" | "error";
   progress: number;
   error?: string;
   result?: BrokerExtractionResult;
@@ -57,8 +53,6 @@ const dateOrNull = (v: unknown): string | null => {
 export function BrokerUpload() {
   const [files, setFiles] = useState<BrokerFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [reviewFile, setReviewFile] = useState<BrokerFile | null>(null);
-  const [reviewData, setReviewData] = useState<Record<string, string>>({});
   const { extractBroker } = useBrokerExtraction();
   const { createNotification } = useCreateNotification();
 
