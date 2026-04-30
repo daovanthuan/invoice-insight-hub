@@ -87,19 +87,12 @@ const num = (v: any): number | null => {
 const isISODate = (v: any) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
 const isCurrency = (v: any) => typeof v === "string" && /^[A-Z]{3}$/.test(v.trim());
 
-// Trọng số field theo từng loại giao dịch — chỉ tính field thật sự liên quan
+// Trọng số field theo 3 loại GD broker hiện hành
 const FIELD_WEIGHTS_BY_TYPE: Record<string, Array<[string, number]>> = {
-  BUY: [
-    ["transaction_type", 3], ["client_name", 2], ["currency", 2],
-    ["trade_date", 2.5], ["settlement_date", 1.5],
-    ["securities_id", 2.5], ["security_name", 2], ["account_no", 1.5],
-    ["gross_amount", 2.5], ["net_amount", 2.5], ["units", 2],
-  ],
-  SELL: [
-    ["transaction_type", 3], ["client_name", 2], ["currency", 2],
-    ["trade_date", 2.5], ["settlement_date", 1.5],
-    ["securities_id", 2.5], ["security_name", 2], ["account_no", 1.5],
-    ["gross_amount", 2.5], ["net_amount", 2.5], ["units", 2],
+  CREDIT_ADVICE: [
+    ["transaction_type", 3], ["client_name", 2], ["currency", 2.5],
+    ["trade_date", 2.5], ["account_no", 2],
+    ["gross_amount", 2.5], ["net_amount", 2.5], ["description", 1.5],
   ],
   DIVIDEND: [
     ["transaction_type", 3], ["client_name", 2], ["currency", 2],
@@ -108,26 +101,11 @@ const FIELD_WEIGHTS_BY_TYPE: Record<string, Array<[string, number]>> = {
     ["gross_amount", 2.5], ["net_amount", 2.5],
     ["dividend_rate", 1], ["wht_amount", 1.5],
   ],
-  INTEREST: [
-    ["transaction_type", 3], ["client_name", 2], ["currency", 2],
-    ["payment_date", 2], ["account_no", 1.5],
-    ["gross_amount", 2.5], ["net_amount", 2.5], ["wht_amount", 1.5],
-  ],
-  FX: [
+  FX_FT: [
     ["transaction_type", 3], ["client_name", 2], ["trade_date", 2.5],
     ["currency_buy", 2.5], ["currency_sell", 2.5],
     ["amount_buy", 2.5], ["amount_sell", 2.5], ["rate", 2],
     ["account_no_buy", 1.5], ["account_no_sell", 1.5],
-  ],
-  TRANSFER: [
-    ["transaction_type", 3], ["client_name", 2], ["currency", 2],
-    ["trade_date", 2.5], ["account_no", 2],
-    ["gross_amount", 2.5], ["net_amount", 2.5], ["description", 1],
-  ],
-  OTHER: [
-    ["transaction_type", 2], ["client_name", 2], ["currency", 2],
-    ["trade_date", 2], ["account_no", 1.5],
-    ["gross_amount", 2], ["net_amount", 2], ["description", 1.5],
   ],
 };
 
@@ -135,7 +113,7 @@ function calcConfidence(data: any): number {
   if (!data) return 0;
 
   const tx = String(data.transaction_type || "").toUpperCase();
-  const weights = FIELD_WEIGHTS_BY_TYPE[tx] || FIELD_WEIGHTS_BY_TYPE.OTHER;
+  const weights = FIELD_WEIGHTS_BY_TYPE[tx] || FIELD_WEIGHTS_BY_TYPE.CREDIT_ADVICE;
 
   // 1) Field coverage theo loại GD
   const total = weights.reduce((s, [, w]) => s + w, 0);
@@ -148,7 +126,7 @@ function calcConfidence(data: any): number {
     if (has(data?.[df]) && !isISODate(data[df])) score -= 0.05;
   }
   if (has(data?.currency) && !isCurrency(data.currency)) score -= 0.05;
-  if (tx === "FX") {
+  if (tx === "FX_FT") {
     if (has(data?.currency_buy) && !isCurrency(data.currency_buy)) score -= 0.05;
     if (has(data?.currency_sell) && !isCurrency(data.currency_sell)) score -= 0.05;
   }
@@ -170,12 +148,7 @@ function calcConfidence(data: any): number {
     const diff = Math.abs(gross - wht - net);
     if (diff / gross <= 0.01) bonus += 0.06;
   }
-  if (tx === "BUY" || tx === "SELL") {
-    const units = num(data?.units);
-    const gp = num(data?.gross_amount);
-    if (units && gp && units > 0 && gp > 0) bonus += 0.04; // có cả units & gross
-  }
-  if (tx === "FX") {
+  if (tx === "FX_FT") {
     const ab = num(data?.amount_buy);
     const as_ = num(data?.amount_sell);
     const rate = num(data?.rate);
