@@ -67,7 +67,7 @@ export function BrokerInvoiceDetailDialog({
           (updates as any)[k] = isNaN(n) ? null : n;
         }
       } else if (k === "transaction_type") {
-        (updates as any)[k] = BROKER_TX_TYPES.includes(raw) ? raw : null;
+        (updates as any)[k] = (BROKER_TX_TYPES as readonly string[]).includes(raw) ? raw : null;
       } else {
         (updates as any)[k] = raw === "" ? null : raw;
       }
