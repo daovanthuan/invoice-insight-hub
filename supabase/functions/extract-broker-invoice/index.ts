@@ -9,7 +9,11 @@ const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") ?? "";
 const BROKER_AI_API_URL = Deno.env.get("BROKER_AI_API_URL") ?? "";
 const BROKER_AI_API_KEY = Deno.env.get("BROKER_AI_API_KEY") ?? "";
 
-const SYSTEM_PROMPT = `You are an AI that extracts BROKER / SECURITIES / FX confirmation notes (advice slips, contract notes, dividend notices, FX confirmations) issued by banks or brokers.
+const SYSTEM_PROMPT = `You are an AI that extracts BROKER / CUSTODIAN advice notes. There are ONLY 3 document types:
+
+1. CREDIT_ADVICE — generic cash credit/debit advice (incoming wire, fee, transfer, interest, redemption, subscription, etc.)
+2. DIVIDEND     — cash dividend / coupon / distribution advice for a security
+3. FX_FT        — Foreign Exchange / Funds Transfer confirmation (currency conversion or cross-currency transfer)
 
 Extract data and return ONLY valid JSON matching this schema. If a field is not present, return an empty string "".
 
@@ -20,35 +24,40 @@ SCHEMA:
   "description": "",
   "securities_id": "",
   "security_name": "",
-  "transaction_type": "",     // One of: BUY, SELL, DIVIDEND, INTEREST, FX, TRANSFER, OTHER
-  "trade_date": "",            // YYYY-MM-DD
+  "transaction_type": "",     // EXACTLY one of: CREDIT_ADVICE, DIVIDEND, FX_FT
+  "trade_date": "",            // YYYY-MM-DD (value/transaction date)
   "settlement_date": "",       // YYYY-MM-DD
-  "ex_date": "",               // YYYY-MM-DD
-  "payment_date": "",          // YYYY-MM-DD
-  "currency": "",
+  "ex_date": "",               // YYYY-MM-DD (DIVIDEND only)
+  "payment_date": "",          // YYYY-MM-DD (DIVIDEND only)
+  "currency": "",              // ISO 3-letter code (USD, VND, EUR...)
   "gross_amount": "",          // plain number, no separators
   "net_amount": "",
   "dividend_rate": "",
   "wht_rate": "",              // percentage as plain number, e.g. "15" for 15%
   "wht_amount": "",
   "units": "",
-  "currency_buy": "",
-  "currency_sell": "",
-  "amount_buy": "",
-  "amount_sell": "",
-  "rate": "",
-  "account_no_buy": "",
-  "account_no_sell": "",
+  "currency_buy": "",          // FX_FT only
+  "currency_sell": "",         // FX_FT only
+  "amount_buy": "",            // FX_FT only
+  "amount_sell": "",           // FX_FT only
+  "rate": "",                  // FX_FT only
+  "account_no_buy": "",        // FX_FT only
+  "account_no_sell": "",       // FX_FT only
   "extend": {}                 // any extra fields you want to keep
 }
 
-RULES:
-- Always output JSON only, no markdown.
+CLASSIFICATION RULES:
+- DIVIDEND: document mentions "dividend", "coupon", "distribution", has ex_date / payment_date and a security identifier (ISIN, ticker, bond code).
+- FX_FT: document mentions "Foreign Exchange", "FX confirmation", "Funds Transfer", currency conversion, has BOTH a buy and sell currency, OR an exchange rate between two currencies.
+- CREDIT_ADVICE: anything else — generic credit/debit advice, wire receipt, fee, interest credit, redemption, subscription, transfer where only ONE currency is involved.
+
+OUTPUT RULES:
+- Always output JSON only, no markdown, no comments.
 - Numbers: output as plain numbers without thousand separators. Use dot for decimal.
 - Dates: convert to YYYY-MM-DD.
-- Determine transaction_type from context (Purchase/Buy → BUY, Sale/Sell → SELL, Dividend/Cash dividend → DIVIDEND, Interest → INTEREST, FX/Foreign Exchange → FX, Transfer → TRANSFER).
-- For FX confirmations, fill currency_buy/sell, amount_buy/sell, rate, account_no_buy/sell.
-- For dividend, fill securities_id, security_name, gross_amount, net_amount, wht_rate, wht_amount, payment_date, ex_date.`;
+- For FX_FT, fill currency_buy/sell, amount_buy/sell, rate, account_no_buy/sell. Leave gross_amount/net_amount empty.
+- For DIVIDEND, fill securities_id, security_name, gross_amount, net_amount, wht_rate, wht_amount, payment_date, ex_date, currency.
+- For CREDIT_ADVICE, fill client_name, account_no, description, currency, gross_amount, net_amount, trade_date.`;
 
 const FIELDS = [
   "client_name","account_no","description","securities_id","security_name","transaction_type",
