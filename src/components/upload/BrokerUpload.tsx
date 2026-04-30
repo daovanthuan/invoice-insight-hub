@@ -130,19 +130,18 @@ export function BrokerUpload() {
 
       update(bf.id, (f) => ({ ...f, progress: 80, result }));
 
-      if (result.confidence_score >= AUTO_SAVE_THRESHOLD) {
-        await saveBroker(result.data, result.confidence_score, result.extend, filePath || null, sourceZip || null);
-        update(bf.id, (f) => ({ ...f, status: "completed", progress: 100 }));
-        await createNotification({
-          title: "Hóa đơn broker đã lưu",
-          message: `${bf.file.name} đã được trích xuất tự động (${Math.round(result.confidence_score * 100)}%)`,
-          type: "success",
-          link: "/invoices",
-        });
-      } else {
-        update(bf.id, (f) => ({ ...f, status: "review", progress: 100 }));
-        toast.info(`${bf.file.name}: cần xem lại (${Math.round(result.confidence_score * 100)}%)`);
-      }
+      // Luôn lưu vào DB. Status: completed nếu confidence cao, pending nếu cần review.
+      const autoComplete = result.confidence_score >= AUTO_SAVE_THRESHOLD;
+      await saveBroker(result.data, result.confidence_score, result.extend, filePath || null, sourceZip || null);
+      update(bf.id, (f) => ({ ...f, status: autoComplete ? "completed" : "pending", progress: 100 }));
+      await createNotification({
+        title: autoComplete ? "Hóa đơn broker đã lưu" : "Hóa đơn broker cần kiểm tra",
+        message: autoComplete
+          ? `${bf.file.name} đã trích xuất tự động (${Math.round(result.confidence_score * 100)}%)`
+          : `${bf.file.name} đã lưu, vui lòng kiểm tra trong tab Broker (${Math.round(result.confidence_score * 100)}%)`,
+        type: autoComplete ? "success" : "warning",
+        link: "/invoices",
+      });
     } catch (e) {
       console.error(e);
       const msg = e instanceof Error ? e.message : "Lỗi xử lý";
@@ -224,37 +223,6 @@ export function BrokerUpload() {
     if (dropped.length) handleFiles(dropped);
   }, []);
 
-  const openReview = (bf: BrokerFile) => {
-    if (!bf.result) return;
-    setReviewData({ ...bf.result.data });
-    setReviewFile(bf);
-  };
-
-  const submitReview = async () => {
-    if (!reviewFile || !reviewFile.result) return;
-    try {
-      await saveBroker(
-        reviewData,
-        reviewFile.result.confidence_score,
-        reviewFile.result.extend,
-        reviewFile.filePath || null,
-        null
-      );
-      update(reviewFile.id, (f) => ({ ...f, status: "completed" }));
-      toast.success("Đã lưu hóa đơn broker");
-      setReviewFile(null);
-      await createNotification({
-        title: "Hóa đơn broker đã lưu",
-        message: `${reviewFile.file.name} đã được lưu sau khi xem lại`,
-        type: "success",
-        link: "/invoices",
-      });
-    } catch (e) {
-      console.error(e);
-      toast.error(e instanceof Error ? e.message : "Lỗi lưu dữ liệu");
-    }
-  };
-
   const remove = (id: string) => setFiles((prev) => prev.filter((f) => f.id !== id));
 
   const statusIcon = (s: BrokerFile["status"]) => {
@@ -262,7 +230,7 @@ export function BrokerUpload() {
       case "uploading":
       case "processing":
         return <Loader2 className="h-4 w-4 animate-spin text-primary" />;
-      case "review":
+      case "pending":
         return <AlertCircle className="h-4 w-4 text-warning" />;
       case "completed":
         return <CheckCircle2 className="h-4 w-4 text-success" />;
@@ -275,37 +243,10 @@ export function BrokerUpload() {
     switch (f.status) {
       case "uploading": return "Đang tải lên...";
       case "processing": return "Đang trích xuất...";
-      case "review": return `Cần xem lại (${Math.round((f.result?.confidence_score || 0) * 100)}%)`;
-      case "completed": return "Hoàn tất";
+      case "pending": return `Đã lưu - cần kiểm tra (${Math.round((f.result?.confidence_score || 0) * 100)}%)`;
+      case "completed": return `Hoàn tất (${Math.round((f.result?.confidence_score || 0) * 100)}%)`;
       case "error": return f.error || "Thất bại";
     }
-  };
-
-  const fieldLabels: Record<string, string> = {
-    client_name: "Khách hàng",
-    account_no: "Số tài khoản",
-    description: "Mô tả",
-    securities_id: "Mã chứng khoán",
-    security_name: "Tên chứng khoán",
-    transaction_type: "Loại giao dịch",
-    trade_date: "Ngày giao dịch (YYYY-MM-DD)",
-    settlement_date: "Ngày thanh toán",
-    ex_date: "Ngày chốt quyền",
-    payment_date: "Ngày trả",
-    currency: "Tiền tệ",
-    gross_amount: "Tổng tiền (gross)",
-    net_amount: "Tiền ròng (net)",
-    units: "Số lượng",
-    dividend_rate: "Tỷ lệ cổ tức",
-    wht_rate: "Thuế khấu trừ (%)",
-    wht_amount: "Số tiền thuế",
-    currency_buy: "Tiền tệ mua",
-    currency_sell: "Tiền tệ bán",
-    amount_buy: "Số tiền mua",
-    amount_sell: "Số tiền bán",
-    rate: "Tỷ giá",
-    account_no_buy: "Tài khoản mua",
-    account_no_sell: "Tài khoản bán",
   };
 
   return (
