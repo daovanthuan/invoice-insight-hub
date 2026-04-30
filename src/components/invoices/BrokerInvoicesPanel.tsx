@@ -387,14 +387,6 @@ export function BrokerInvoicesPanel() {
                                 </Button>
                               </>
                             )}
-                            <Button
-                              variant="ghost" size="icon"
-                              onClick={(e) => { e.stopPropagation(); setDeleteId(inv.id); }}
-                              className="text-muted-foreground hover:text-destructive"
-                              title="Xóa"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
                           </div>
                         </TableCell>
                       </motion.tr>
@@ -445,28 +437,6 @@ export function BrokerInvoicesPanel() {
               className="bg-warning hover:bg-warning/90 text-warning-foreground"
             >
               {acting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Hủy hóa đơn"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Delete confirm */}
-      <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Xóa hóa đơn broker</AlertDialogTitle>
-            <AlertDialogDescription>
-              Hành động này không thể hoàn tác. Hóa đơn sẽ bị xóa vĩnh viễn.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Đóng</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={acting}
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-            >
-              {acting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Xóa"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
