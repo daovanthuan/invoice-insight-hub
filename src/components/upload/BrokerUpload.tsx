@@ -332,9 +332,6 @@ export function BrokerUpload() {
                         <Progress value={f.progress} className="mt-1.5 h-1" />
                       )}
                     </div>
-                    {f.status === "review" && (
-                      <Button size="sm" onClick={() => openReview(f)}>Xem lại</Button>
-                    )}
                     <span className="text-xs text-muted-foreground shrink-0">{(f.file.size / 1024).toFixed(1)} KB</span>
                   </div>
                   <Button
@@ -351,49 +348,6 @@ export function BrokerUpload() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      <Dialog open={!!reviewFile} onOpenChange={(o) => !o && setReviewFile(null)}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              Xem lại dữ liệu trích xuất
-              {reviewFile && (
-                <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  ({Math.round((reviewFile.result?.confidence_score || 0) * 100)}% tin cậy)
-                </span>
-              )}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-            {Object.keys(fieldLabels).map((k) => (
-              <div key={k} className="space-y-1.5">
-                <Label htmlFor={`f-${k}`} className="text-xs">{fieldLabels[k]}</Label>
-                {k === "transaction_type" ? (
-                  <Select
-                    value={reviewData[k] || ""}
-                    onValueChange={(v) => setReviewData((p) => ({ ...p, [k]: v }))}
-                  >
-                    <SelectTrigger id={`f-${k}`}><SelectValue placeholder="Chọn..." /></SelectTrigger>
-                    <SelectContent>
-                      {TX_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input
-                    id={`f-${k}`}
-                    value={reviewData[k] || ""}
-                    onChange={(e) => setReviewData((p) => ({ ...p, [k]: e.target.value }))}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setReviewFile(null)}>Hủy</Button>
-            <Button onClick={submitReview}>Lưu hóa đơn broker</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
