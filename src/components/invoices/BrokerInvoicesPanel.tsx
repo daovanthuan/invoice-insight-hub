@@ -90,18 +90,14 @@ export function BrokerInvoicesPanel() {
     return matchesSearch && matchesStatus && matchesTx && matchesDate;
   }), [invoices, searchTerm, statusFilter, txFilter, dateFrom, dateTo]);
 
-  // Dynamic columns: chỉ hiển thị field nào có ít nhất 1 dòng có data
+  // Chỉ hiển thị các field quan trọng trong bảng. Chi tiết đầy đủ xem trong dialog.
   const visibleKeys = useMemo(() => {
-    const PRIORITY = [
-      "client_name", "securities_id", "security_name", "transaction_type",
-      "trade_date", "settlement_date", "currency", "units", "net_amount", "gross_amount",
+    const CORE = [
+      "client_name", "securities_id", "transaction_type",
+      "trade_date", "currency", "net_amount",
     ];
-    const dynamic = getBrokerVisibleFields(filtered.length ? filtered : invoices, ALL_KEYS);
-    // sort theo priority trước, rồi tới còn lại
-    return [
-      ...PRIORITY.filter((k) => dynamic.includes(k)),
-      ...dynamic.filter((k) => !PRIORITY.includes(k)),
-    ];
+    const dynamic = getBrokerVisibleFields(filtered.length ? filtered : invoices, CORE);
+    return CORE.filter((k) => dynamic.includes(k));
   }, [filtered, invoices]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
