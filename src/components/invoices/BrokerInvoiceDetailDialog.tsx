@@ -12,7 +12,7 @@ import { Loader2, Image as ImageIcon, Pencil, Save, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BrokerInvoice } from "@/types/database";
 import {
-  BROKER_FIELD_LABELS, BROKER_TX_TYPES, BROKER_NUMERIC_FIELDS,
+  BROKER_FIELD_LABELS, BROKER_TX_TYPES, BROKER_TX_TYPE_LABELS, BROKER_NUMERIC_FIELDS,
   BROKER_STATUS_LABELS, BROKER_STATUS_STYLES, formatBrokerValue,
 } from "@/lib/brokerFields";
 
@@ -159,7 +159,9 @@ export function BrokerInvoiceDetailDialog({
                   >
                     <SelectTrigger id={`bk-${k}`}><SelectValue placeholder="Chọn..." /></SelectTrigger>
                     <SelectContent>
-                      {BROKER_TX_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                      {BROKER_TX_TYPES.map((t) => (
+                        <SelectItem key={t} value={t}>{BROKER_TX_TYPE_LABELS[t] || t}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 ) : (
