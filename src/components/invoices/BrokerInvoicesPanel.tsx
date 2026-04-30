@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Search, Filter, Eye, Download, Briefcase, Loader2, Pencil, Ban,
-  CalendarIcon, X, FileText, FileSpreadsheet, Image as ImageIcon, Trash2, CheckCircle2,
+  CalendarIcon, X, FileText, FileSpreadsheet, Image as ImageIcon, CheckCircle2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBrokerInvoices } from "@/hooks/useBrokerInvoices";
@@ -44,7 +44,7 @@ const ALL_KEYS = Object.keys(BROKER_FIELD_LABELS);
 const PAGE_SIZE = 20;
 
 export function BrokerInvoicesPanel() {
-  const { invoices, loading, updateInvoice, updateStatus, deleteInvoice } = useBrokerInvoices();
+  const { invoices, loading, updateInvoice, updateStatus } = useBrokerInvoices();
   const { isAdmin } = useUserRole();
   const { previewUrl, loadingPreview, getPreviewUrl, clearPreview } = useInvoicePreview();
   const { createNotification } = useCreateNotification();
@@ -58,7 +58,6 @@ export function BrokerInvoicesPanel() {
 
   const [selected, setSelected] = useState<BrokerInvoice | null>(null);
   const [cancelId, setCancelId] = useState<string | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [acting, setActing] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
@@ -143,14 +142,6 @@ export function BrokerInvoicesPanel() {
         link: "/invoices",
       });
     }
-  };
-
-  const handleDelete = async () => {
-    if (!deleteId) return;
-    setActing(true);
-    await deleteInvoice(deleteId);
-    setActing(false);
-    setDeleteId(null);
   };
 
   return (
