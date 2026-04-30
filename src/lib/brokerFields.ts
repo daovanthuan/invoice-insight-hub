@@ -27,7 +27,13 @@ export const BROKER_FIELD_LABELS: Record<string, string> = {
   account_no_sell: "TK bán",
 };
 
-export const BROKER_TX_TYPES = ["BUY", "SELL", "DIVIDEND", "INTEREST", "FX", "TRANSFER", "OTHER"];
+export const BROKER_TX_TYPES = ["CREDIT_ADVICE", "DIVIDEND", "FX_FT"] as const;
+
+export const BROKER_TX_TYPE_LABELS: Record<string, string> = {
+  CREDIT_ADVICE: "Credit Advice",
+  DIVIDEND: "Dividend",
+  FX_FT: "FX-FT",
+};
 
 export const BROKER_NUMERIC_FIELDS = new Set([
   "units", "gross_amount", "net_amount", "dividend_rate",
@@ -64,6 +70,9 @@ export function getBrokerVisibleFields(rows: BrokerInvoice[], keys: string[]): s
 
 export function formatBrokerValue(key: string, value: unknown): string {
   if (value === null || value === undefined || value === "") return "-";
+  if (key === "transaction_type") {
+    return BROKER_TX_TYPE_LABELS[String(value)] || String(value);
+  }
   if (BROKER_NUMERIC_FIELDS.has(key) && typeof value === "number") {
     return value.toLocaleString("vi-VN", { maximumFractionDigits: 4 });
   }

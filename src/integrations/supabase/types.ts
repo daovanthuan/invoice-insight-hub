@@ -762,14 +762,7 @@ export type Database = {
         | "completed"
         | "failed"
         | "cancelled"
-      broker_transaction_type:
-        | "BUY"
-        | "SELL"
-        | "DIVIDEND"
-        | "INTEREST"
-        | "FX"
-        | "TRANSFER"
-        | "OTHER"
+      broker_transaction_type: "CREDIT_ADVICE" | "DIVIDEND" | "FX_FT"
       entity_status: "active" | "inactive" | "deleted"
       file_status: "pending" | "processing" | "completed" | "error"
       gender_type: "male" | "female" | "other"
@@ -915,15 +908,7 @@ export const Constants = {
         "failed",
         "cancelled",
       ],
-      broker_transaction_type: [
-        "BUY",
-        "SELL",
-        "DIVIDEND",
-        "INTEREST",
-        "FX",
-        "TRANSFER",
-        "OTHER",
-      ],
+      broker_transaction_type: ["CREDIT_ADVICE", "DIVIDEND", "FX_FT"],
       entity_status: ["active", "inactive", "deleted"],
       file_status: ["pending", "processing", "completed", "error"],
       gender_type: ["male", "female", "other"],
