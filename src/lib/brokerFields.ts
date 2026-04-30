@@ -70,6 +70,9 @@ export function getBrokerVisibleFields(rows: BrokerInvoice[], keys: string[]): s
 
 export function formatBrokerValue(key: string, value: unknown): string {
   if (value === null || value === undefined || value === "") return "-";
+  if (key === "transaction_type") {
+    return BROKER_TX_TYPE_LABELS[String(value)] || String(value);
+  }
   if (BROKER_NUMERIC_FIELDS.has(key) && typeof value === "number") {
     return value.toLocaleString("vi-VN", { maximumFractionDigits: 4 });
   }
