@@ -70,31 +70,31 @@ const Auth = () => {
 
     // Validation
     if (!signUpForm.user_code.trim()) {
-      toast.error("Vui lòng nhập mã nhân viên");
+      toast.error("Please enter your employee code");
       setIsLoading(false);
       return;
     }
 
     if (!signUpForm.full_name.trim()) {
-      toast.error("Vui lòng nhập họ và tên");
+      toast.error("Please enter your full name");
       setIsLoading(false);
       return;
     }
 
     if (!signUpForm.email.trim()) {
-      toast.error("Vui lòng nhập email");
+      toast.error("Please enter your email");
       setIsLoading(false);
       return;
     }
 
     if (signUpForm.password.length < 6) {
-      toast.error("Mật khẩu phải có ít nhất 6 ký tự");
+      toast.error("Password must be at least 6 characters");
       setIsLoading(false);
       return;
     }
 
     if (signUpForm.password !== signUpForm.confirmPassword) {
-      toast.error("Mật khẩu xác nhận không khớp");
+      toast.error("Passwords do not match");
       setIsLoading(false);
       return;
     }
@@ -110,7 +110,7 @@ const Auth = () => {
       if (checkError) throw checkError;
 
       if (existingUser) {
-        toast.error("Mã nhân viên này đã được sử dụng");
+        toast.error("This employee code is already in use");
         setIsLoading(false);
         return;
       }
@@ -131,7 +131,7 @@ const Auth = () => {
 
       if (error) {
         if (error.message.includes("already registered")) {
-          toast.error("Email này đã được đăng ký. Vui lòng đăng nhập.");
+          toast.error("This email is already registered. Please sign in.");
         } else {
           toast.error(error.message);
         }
@@ -158,11 +158,11 @@ const Auth = () => {
         }
       }
 
-      toast.success("Đăng ký thành công! Bạn có thể đăng nhập ngay.");
+      toast.success("Sign-up successful! You can sign in now.");
       setSignUpForm(initialSignUpFormData);
     } catch (error) {
       console.error('Signup error:', error);
-      toast.error("Đã xảy ra lỗi. Vui lòng thử lại.");
+      toast.error("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -173,7 +173,7 @@ const Auth = () => {
     setIsLoading(true);
 
     if (!loginUserCode.trim()) {
-      toast.error("Vui lòng nhập mã nhân viên");
+      toast.error("Please enter your employee code");
       setIsLoading(false);
       return;
     }
@@ -189,19 +189,19 @@ const Auth = () => {
       if (profileError) throw profileError;
 
       if (!profile) {
-        toast.error("Mã nhân viên không tồn tại");
+        toast.error("Employee code not found");
         setIsLoading(false);
         return;
       }
 
       if (!profile.email) {
-        toast.error("Tài khoản chưa có email liên kết");
+        toast.error("This account has no linked email");
         setIsLoading(false);
         return;
       }
 
       if (profile.status === 'inactive') {
-        toast.error("Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.");
+        toast.error("Your account has been deactivated. Please contact an administrator.");
         setIsLoading(false);
         return;
       }
@@ -214,7 +214,7 @@ const Auth = () => {
 
       if (error) {
         if (error.message.includes("Invalid login credentials")) {
-          toast.error("Mã nhân viên hoặc mật khẩu không đúng.");
+          toast.error("Incorrect employee code or password.");
         } else {
           toast.error(error.message);
         }
@@ -222,11 +222,11 @@ const Auth = () => {
         return;
       }
 
-      toast.success("Đăng nhập thành công!");
+      toast.success("Signed in successfully!");
       navigate("/dashboard");
     } catch (error) {
       console.error('Sign in error:', error);
-      toast.error("Đã xảy ra lỗi. Vui lòng thử lại.");
+      toast.error("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -248,39 +248,39 @@ const Auth = () => {
           </div>
           <h1 className="text-3xl font-bold text-foreground">InvoiceAI</h1>
           <p className="text-muted-foreground mt-2">
-            Trích xuất hóa đơn thông minh với AI
+            Smart invoice extraction powered by AI
           </p>
         </div>
 
         <Card className="border-border/50 bg-card/50 backdrop-blur">
           <CardHeader>
-            <CardTitle>Chào mừng</CardTitle>
+            <CardTitle>Welcome</CardTitle>
             <CardDescription>
-              Đăng nhập hoặc tạo tài khoản để bắt đầu
+              Sign in or create an account to get started
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="signin" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">Đăng nhập</TabsTrigger>
-                <TabsTrigger value="signup">Đăng ký</TabsTrigger>
+                <TabsTrigger value="signin">Sign in</TabsTrigger>
+                <TabsTrigger value="signup">Sign up</TabsTrigger>
               </TabsList>
 
               <TabsContent value="signin">
                 <form onSubmit={handleSignIn} className="space-y-4 mt-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signin-user-code">Mã nhân viên</Label>
+                    <Label htmlFor="signin-user-code">Employee code</Label>
                     <Input
                       id="signin-user-code"
                       type="text"
-                      placeholder="Nhập mã nhân viên"
+                      placeholder="Enter your employee code"
                       value={loginUserCode}
                       onChange={(e) => setLoginUserCode(e.target.value)}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signin-password">Mật khẩu</Label>
+                    <Label htmlFor="signin-password">Password</Label>
                     <Input
                       id="signin-password"
                       type="password"
@@ -295,10 +295,10 @@ const Auth = () => {
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Đang xử lý...
+                        Processing...
                       </>
                     ) : (
-                      "Đăng nhập"
+                      "Sign in"
                     )}
                   </Button>
                 </form>
@@ -308,22 +308,22 @@ const Auth = () => {
                 <form onSubmit={handleSignUp} className="space-y-4 mt-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="signup-user-code">Mã nhân viên <span className="text-destructive">*</span></Label>
+                      <Label htmlFor="signup-user-code">Employee code <span className="text-destructive">*</span></Label>
                       <Input
                         id="signup-user-code"
                         type="text"
-                        placeholder="VD: NV001"
+                        placeholder="e.g. EMP001"
                         value={signUpForm.user_code}
                         onChange={(e) => setSignUpForm({ ...signUpForm, user_code: e.target.value })}
                         required
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="signup-full-name">Họ và tên <span className="text-destructive">*</span></Label>
+                      <Label htmlFor="signup-full-name">Full name <span className="text-destructive">*</span></Label>
                       <Input
                         id="signup-full-name"
                         type="text"
-                        placeholder="Nhập họ và tên"
+                        placeholder="Enter your full name"
                         value={signUpForm.full_name}
                         onChange={(e) => setSignUpForm({ ...signUpForm, full_name: e.target.value })}
                         required
@@ -345,7 +345,7 @@ const Auth = () => {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="signup-phone">Số điện thoại</Label>
+                      <Label htmlFor="signup-phone">Phone number</Label>
                       <Input
                         id="signup-phone"
                         type="tel"
@@ -355,7 +355,7 @@ const Auth = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="signup-dob">Ngày sinh</Label>
+                      <Label htmlFor="signup-dob">Date of birth</Label>
                       <Input
                         id="signup-dob"
                         type="date"
@@ -367,27 +367,27 @@ const Auth = () => {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="signup-gender">Giới tính</Label>
+                      <Label htmlFor="signup-gender">Gender</Label>
                       <Select
                         value={signUpForm.gender}
                         onValueChange={(value) => setSignUpForm({ ...signUpForm, gender: value as 'male' | 'female' | 'other' })}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Chọn giới tính" />
+                          <SelectValue placeholder="Select gender" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="male">Nam</SelectItem>
-                          <SelectItem value="female">Nữ</SelectItem>
-                          <SelectItem value="other">Khác</SelectItem>
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="signup-address">Địa chỉ</Label>
+                      <Label htmlFor="signup-address">Address</Label>
                       <Input
                         id="signup-address"
                         type="text"
-                        placeholder="Nhập địa chỉ"
+                        placeholder="Enter your address"
                         value={signUpForm.address}
                         onChange={(e) => setSignUpForm({ ...signUpForm, address: e.target.value })}
                       />
@@ -396,7 +396,7 @@ const Auth = () => {
 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="signup-password">Mật khẩu <span className="text-destructive">*</span></Label>
+                      <Label htmlFor="signup-password">Password <span className="text-destructive">*</span></Label>
                       <Input
                         id="signup-password"
                         type="password"
@@ -408,7 +408,7 @@ const Auth = () => {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="signup-confirm-password">Xác nhận MK <span className="text-destructive">*</span></Label>
+                      <Label htmlFor="signup-confirm-password">Confirm password <span className="text-destructive">*</span></Label>
                       <Input
                         id="signup-confirm-password"
                         type="password"
@@ -422,17 +422,17 @@ const Auth = () => {
                   </div>
 
                   <p className="text-xs text-muted-foreground">
-                    <span className="text-destructive">*</span> Bắt buộc | Mật khẩu phải có ít nhất 6 ký tự
+                    <span className="text-destructive">*</span> Required | Password must be at least 6 characters
                   </p>
 
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Đang xử lý...
+                        Processing...
                       </>
                     ) : (
-                      "Đăng ký"
+                      "Sign up"
                     )}
                   </Button>
                 </form>

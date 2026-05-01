@@ -39,11 +39,11 @@ interface InvoiceEditDialogProps {
 }
 
 const statusOptions: { value: InvoiceStatus; label: string }[] = [
-  { value: 'pending', label: 'Đang chờ' },
-  { value: 'processed', label: 'Đã xử lý' },
-  { value: 'approved', label: 'Đã duyệt' },
-  { value: 'rejected', label: 'Từ chối' },
-  { value: 'draft', label: 'Nháp' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'processed', label: 'Processed' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Rejected' },
+  { value: 'draft', label: 'Draft' },
 ];
 
 export function InvoiceEditDialog({
@@ -190,12 +190,12 @@ export function InvoiceEditDialog({
 
       const success = await onSave(invoiceData, lineItems);
       if (success) {
-        toast.success('Đã lưu thay đổi');
+        toast.success('Changes saved');
         onClose();
       }
     } catch (error) {
       console.error('Error saving invoice:', error);
-      toast.error('Không thể lưu hóa đơn');
+      toast.error('Could not save invoice');
     } finally {
       setIsSaving(false);
     }
@@ -207,52 +207,52 @@ export function InvoiceEditDialog({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Chỉnh sửa hóa đơn - {invoice.invoice_number || invoice.invoice_serial}</DialogTitle>
+          <DialogTitle>Edit invoice - {invoice.invoice_number || invoice.invoice_serial}</DialogTitle>
         </DialogHeader>
 
         <Tabs defaultValue="info" className="mt-4">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="info">Thông tin chung</TabsTrigger>
-            <TabsTrigger value="items">Hàng hóa ({lineItems.length})</TabsTrigger>
-            <TabsTrigger value="extend">Mở rộng ({Object.keys(extendData).length})</TabsTrigger>
+            <TabsTrigger value="info">General info</TabsTrigger>
+            <TabsTrigger value="items">Line items ({lineItems.length})</TabsTrigger>
+            <TabsTrigger value="extend">Extended ({Object.keys(extendData).length})</TabsTrigger>
           </TabsList>
 
           {/* Info Tab */}
           <TabsContent value="info" className="space-y-6 mt-4">
             {/* Vendor Info */}
             <div className="space-y-4">
-              <h4 className="font-semibold text-primary">Thông tin nhà cung cấp</h4>
+              <h4 className="font-semibold text-primary">Vendor information</h4>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Tên nhà cung cấp</Label>
+                  <Label>Vendor name</Label>
                   <Input
                     value={formData.vendor_name || ''}
                     onChange={(e) => handleInputChange('vendor_name', e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Mã số thuế</Label>
+                  <Label>Tax ID</Label>
                   <Input
                     value={formData.vendor_tax_id || ''}
                     onChange={(e) => handleInputChange('vendor_tax_id', e.target.value)}
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <Label>Địa chỉ</Label>
+                  <Label>Address</Label>
                   <Input
                     value={formData.vendor_address || ''}
                     onChange={(e) => handleInputChange('vendor_address', e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Số điện thoại</Label>
+                  <Label>Phone</Label>
                   <Input
                     value={formData.vendor_phone || ''}
                     onChange={(e) => handleInputChange('vendor_phone', e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Số tài khoản</Label>
+                  <Label>Account number</Label>
                   <Input
                     value={formData.vendor_account_no || ''}
                     onChange={(e) => handleInputChange('vendor_account_no', e.target.value)}
@@ -263,31 +263,31 @@ export function InvoiceEditDialog({
 
             {/* Buyer Info */}
             <div className="space-y-4">
-              <h4 className="font-semibold text-primary">Thông tin người mua</h4>
+              <h4 className="font-semibold text-primary">Buyer information</h4>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label>Tên người mua</Label>
+                  <Label>Buyer name</Label>
                   <Input
                     value={formData.buyer_name || ''}
                     onChange={(e) => handleInputChange('buyer_name', e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Mã số thuế</Label>
+                  <Label>Tax ID</Label>
                   <Input
                     value={formData.buyer_tax_id || ''}
                     onChange={(e) => handleInputChange('buyer_tax_id', e.target.value)}
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
-                  <Label>Địa chỉ</Label>
+                  <Label>Address</Label>
                   <Input
                     value={formData.buyer_address || ''}
                     onChange={(e) => handleInputChange('buyer_address', e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Số tài khoản</Label>
+                  <Label>Account number</Label>
                   <Input
                     value={formData.buyer_account_no || ''}
                     onChange={(e) => handleInputChange('buyer_account_no', e.target.value)}
@@ -298,24 +298,24 @@ export function InvoiceEditDialog({
 
             {/* Invoice Meta */}
             <div className="space-y-4">
-              <h4 className="font-semibold text-primary">Thông tin hóa đơn</h4>
+              <h4 className="font-semibold text-primary">Invoice information</h4>
               <div className="grid gap-4 md:grid-cols-3">
                 <div className="space-y-2">
-                  <Label>Số hóa đơn</Label>
+                  <Label>Invoice number</Label>
                   <Input
                     value={formData.invoice_number || ''}
                     onChange={(e) => handleInputChange('invoice_number', e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Ký hiệu</Label>
+                  <Label>Serial</Label>
                   <Input
                     value={formData.invoice_serial || ''}
                     onChange={(e) => handleInputChange('invoice_serial', e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Ngày hóa đơn</Label>
+                  <Label>Invoice date</Label>
                   <Input
                     type="date"
                     value={formData.invoice_date || ''}
@@ -323,21 +323,21 @@ export function InvoiceEditDialog({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Hình thức thanh toán</Label>
+                  <Label>Payment method</Label>
                   <Input
                     value={formData.payment_method || ''}
                     onChange={(e) => handleInputChange('payment_method', e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Tiền tệ</Label>
+                  <Label>Currency</Label>
                   <Input
                     value={formData.currency || ''}
                     onChange={(e) => handleInputChange('currency', e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Trạng thái</Label>
+                  <Label>Status</Label>
                   <Select
                     value={formData.status}
                     onValueChange={(value) => handleInputChange('status', value)}
@@ -359,10 +359,10 @@ export function InvoiceEditDialog({
 
             {/* Totals */}
             <div className="space-y-4">
-              <h4 className="font-semibold text-primary">Tổng tiền</h4>
+              <h4 className="font-semibold text-primary">Totals</h4>
               <div className="grid gap-4 md:grid-cols-4">
                 <div className="space-y-2">
-                  <Label>Cộng tiền hàng</Label>
+                  <Label>Subtotal</Label>
                   <Input
                     type="number"
                     value={formData.subtotal ?? ''}
@@ -370,7 +370,7 @@ export function InvoiceEditDialog({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Thuế suất (%)</Label>
+                  <Label>Tax rate (%)</Label>
                   <Input
                     type="number"
                     value={formData.tax_rate ?? ''}
@@ -378,7 +378,7 @@ export function InvoiceEditDialog({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Tiền thuế</Label>
+                  <Label>Tax amount</Label>
                   <Input
                     type="number"
                     value={formData.tax_amount ?? ''}
@@ -386,7 +386,7 @@ export function InvoiceEditDialog({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Tổng cộng</Label>
+                  <Label>Total</Label>
                   <Input
                     type="number"
                     value={formData.total_amount ?? ''}
@@ -395,7 +395,7 @@ export function InvoiceEditDialog({
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Số tiền bằng chữ</Label>
+                <Label>Amount in words</Label>
                 <Textarea
                   value={formData.amount_in_words || ''}
                   onChange={(e) => handleInputChange('amount_in_words', e.target.value)}
@@ -409,10 +409,10 @@ export function InvoiceEditDialog({
           <TabsContent value="items" className="mt-4">
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h4 className="font-semibold text-primary">Danh mục hàng hóa</h4>
+                <h4 className="font-semibold text-primary">Line items</h4>
                 <Button variant="outline" size="sm" onClick={addLineItem}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Thêm dòng
+                  Add row
                 </Button>
               </div>
 
@@ -420,12 +420,12 @@ export function InvoiceEditDialog({
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50">
-                      <TableHead className="text-xs w-24">Mã</TableHead>
-                      <TableHead className="text-xs">Mô tả</TableHead>
-                      <TableHead className="text-xs w-20">ĐVT</TableHead>
-                      <TableHead className="text-xs w-20 text-right">SL</TableHead>
-                      <TableHead className="text-xs w-28 text-right">Đơn giá</TableHead>
-                      <TableHead className="text-xs w-28 text-right">Thành tiền</TableHead>
+                      <TableHead className="text-xs w-24">Code</TableHead>
+                      <TableHead className="text-xs">Description</TableHead>
+                      <TableHead className="text-xs w-20">Unit</TableHead>
+                      <TableHead className="text-xs w-20 text-right">Qty</TableHead>
+                      <TableHead className="text-xs w-28 text-right">Unit price</TableHead>
+                      <TableHead className="text-xs w-28 text-right">Amount</TableHead>
                       <TableHead className="text-xs w-12"></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -492,7 +492,7 @@ export function InvoiceEditDialog({
                     {lineItems.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                          Chưa có hàng hóa. Nhấn "Thêm dòng" để thêm mới.
+                          No line items. Click "Add row" to add one.
                         </TableCell>
                       </TableRow>
                     )}
@@ -506,10 +506,10 @@ export function InvoiceEditDialog({
           <TabsContent value="extend" className="mt-4">
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h4 className="font-semibold text-primary">Thông tin mở rộng</h4>
+                <h4 className="font-semibold text-primary">Extended information</h4>
                 <Button variant="outline" size="sm" onClick={addExtendField}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Thêm trường
+                  Add field
                 </Button>
               </div>
 
@@ -517,7 +517,7 @@ export function InvoiceEditDialog({
                 {Object.entries(extendData).map(([key, value]) => (
                   <div key={key} className="flex gap-3 items-start">
                     <div className="space-y-1 w-48">
-                      <Label className="text-xs text-muted-foreground">Tên trường</Label>
+                      <Label className="text-xs text-muted-foreground">Field name</Label>
                       <Input
                         value={key}
                         onChange={(e) => renameExtendField(key, e.target.value)}
@@ -525,7 +525,7 @@ export function InvoiceEditDialog({
                       />
                     </div>
                     <div className="space-y-1 flex-1">
-                      <Label className="text-xs text-muted-foreground">Giá trị</Label>
+                      <Label className="text-xs text-muted-foreground">Value</Label>
                       <Input
                         value={value}
                         onChange={(e) => handleExtendChange(key, e.target.value)}
@@ -544,7 +544,7 @@ export function InvoiceEditDialog({
                 ))}
                 {Object.keys(extendData).length === 0 && (
                   <p className="text-center text-muted-foreground py-8">
-                    Chưa có thông tin mở rộng. Nhấn "Thêm trường" để thêm mới.
+                    No extended information. Click "Add field" to add one.
                   </p>
                 )}
               </div>
@@ -554,11 +554,11 @@ export function InvoiceEditDialog({
 
         <DialogFooter className="mt-6">
           <Button variant="outline" onClick={onClose} disabled={isSaving}>
-            Hủy
+            Cancel
           </Button>
           <Button onClick={handleSave} disabled={isSaving}>
             {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Lưu thay đổi
+            Save changes
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -11,7 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNotifications } from '@/hooks/useNotifications';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
-import { vi } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
 import { Notification } from '@/types/database';
 
 const typeIcons = {
@@ -61,7 +61,7 @@ export function NotificationDropdown() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
         <div className="flex items-center justify-between px-3 py-2">
-          <h4 className="font-semibold">Thông báo</h4>
+          <h4 className="font-semibold">Notifications</h4>
           {notifications.length > 0 && (
             <div className="flex gap-1">
               {unreadCount > 0 && (
@@ -72,7 +72,7 @@ export function NotificationDropdown() {
                   className="h-7 text-xs"
                 >
                   <CheckCheck className="h-3 w-3 mr-1" />
-                  Đọc tất cả
+                  Mark all read
                 </Button>
               )}
               <Button
@@ -82,7 +82,7 @@ export function NotificationDropdown() {
                 className="h-7 text-xs text-destructive hover:text-destructive"
               >
                 <Trash2 className="h-3 w-3 mr-1" />
-                Xóa tất cả
+                Clear all
               </Button>
             </div>
           )}
@@ -92,7 +92,7 @@ export function NotificationDropdown() {
         {notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <Bell className="h-8 w-8 text-muted-foreground mb-2" />
-            <p className="text-sm text-muted-foreground">Không có thông báo</p>
+            <p className="text-sm text-muted-foreground">No notifications</p>
           </div>
         ) : (
           <ScrollArea className="h-[300px]">
@@ -125,7 +125,7 @@ export function NotificationDropdown() {
                     <p className="text-[10px] text-muted-foreground mt-1">
                       {formatDistanceToNow(new Date(notification.created_at), {
                         addSuffix: true,
-                        locale: vi,
+                        locale: enUS,
                       })}
                     </p>
                   </div>
