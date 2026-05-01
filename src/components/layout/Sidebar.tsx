@@ -20,19 +20,19 @@ import { Badge } from '@/components/ui/badge';
 // Admin navigation items
 const adminNavItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-  { icon: FileText, label: 'Hóa đơn', path: '/invoices' },
-  { icon: Upload, label: 'Tải lên', path: '/upload' },
-  { icon: BarChart3, label: 'Thống kê', path: '/analytics' },
-  { icon: Users, label: 'Người dùng', path: '/users' },
-  { icon: Settings, label: 'Cài đặt', path: '/settings' },
+  { icon: FileText, label: 'Invoices', path: '/invoices' },
+  { icon: Upload, label: 'Upload', path: '/upload' },
+  { icon: BarChart3, label: 'Analytics', path: '/analytics' },
+  { icon: Users, label: 'Users', path: '/users' },
+  { icon: Settings, label: 'Settings', path: '/settings' },
 ];
 
 // User navigation items
 const userNavItems = [
-  { icon: Home, label: 'Trang chủ', path: '/' },
-  { icon: FileText, label: 'Hóa đơn', path: '/invoices' },
-  { icon: Upload, label: 'Tải lên', path: '/upload' },
-  { icon: Settings, label: 'Cài đặt', path: '/settings' },
+  { icon: Home, label: 'Home', path: '/' },
+  { icon: FileText, label: 'Invoices', path: '/invoices' },
+  { icon: Upload, label: 'Upload', path: '/upload' },
+  { icon: Settings, label: 'Settings', path: '/settings' },
 ];
 
 interface SidebarProps {
@@ -72,7 +72,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
         {!roleLoading && (
           <div className="px-4 py-2">
             <Badge variant={isAdmin ? 'default' : 'secondary'} className="w-full justify-center">
-              {isAdmin ? 'Quản trị viên' : 'Người dùng'}
+              {isAdmin ? 'Administrator' : 'User'}
             </Badge>
           </div>
         )}
@@ -115,7 +115,7 @@ export function Sidebar({ onNavigate }: SidebarProps) {
             onClick={handleSignOut}
           >
             <LogOut className="h-5 w-5" />
-            Đăng xuất
+            Sign out
           </Button>
           <div className="rounded-lg bg-muted/50 p-4">
             <p className="text-xs font-medium text-muted-foreground">

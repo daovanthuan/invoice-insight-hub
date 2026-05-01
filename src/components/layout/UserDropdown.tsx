@@ -26,7 +26,7 @@ export function UserDropdown() {
       navigate('/auth');
     } catch (error) {
       console.error('Error signing out:', error);
-      toast.error('Không thể đăng xuất');
+      toast.error('Unable to sign out');
     }
   };
 
@@ -69,7 +69,7 @@ export function UserDropdown() {
         <DropdownMenuLabel>
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium">
-              {profile?.full_name || 'Người dùng'}
+              {profile?.full_name || 'User'}
             </p>
             <p className="text-xs text-muted-foreground truncate">
               {user?.email}
@@ -79,7 +79,7 @@ export function UserDropdown() {
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => navigate('/settings')}>
           <Settings className="h-4 w-4 mr-2" />
-          Cài đặt
+          Settings
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
@@ -87,7 +87,7 @@ export function UserDropdown() {
           className="text-destructive focus:text-destructive"
         >
           <LogOut className="h-4 w-4 mr-2" />
-          Đăng xuất
+          Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
