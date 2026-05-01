@@ -59,7 +59,7 @@ const Index = () => {
         try {
           const d = new Date(date);
           if (!isNaN(d.getTime())) {
-            month = d.toLocaleDateString('vi-VN', { month: 'short', year: '2-digit' });
+            month = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
           }
         } catch {
           month = 'Unknown';
@@ -140,11 +140,11 @@ const Index = () => {
     if (entries.length === 0) return '0';
     
     if (entries.length === 1) {
-      return `${entries[0][1].toLocaleString('vi-VN', { maximumFractionDigits: 0 })} ${entries[0][0]}`;
+      return `${entries[0][1].toLocaleString('en-US', { maximumFractionDigits: 0 })} ${entries[0][0]}`;
     }
     
     // If multiple currencies, just show count
-    return `${entries.length} loại tiền`;
+    return `${entries.length} currencies`;
   };
 
   // Convert for RecentInvoices component
@@ -186,7 +186,7 @@ const Index = () => {
   if (loading) {
     return (
       <MainLayout>
-        <Header title="Dashboard" subtitle="Trích xuất hóa đơn thông minh với AI" />
+        <Header title="Dashboard" subtitle="Smart invoice extraction powered by AI" />
         <div className="p-6">
           <div className="mb-8 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {[1, 2, 3, 4].map((i) => (
@@ -206,42 +206,42 @@ const Index = () => {
     <MainLayout>
       <Header 
         title="Dashboard" 
-        subtitle="Trích xuất hóa đơn thông minh với AI"
+        subtitle="Smart invoice extraction powered by AI"
       />
       
       <div className="p-6">
         {/* Stats Grid */}
         <div className="mb-8 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
-            title="Tổng hóa đơn"
+            title="Total invoices"
             value={stats.totalInvoices.toLocaleString()}
-            change="Tất cả hóa đơn"
+            change="All invoices"
             changeType="neutral"
             icon={FileText}
             delay={0}
           />
           <StatCard
-            title="Tổng giá trị"
+            title="Total value"
             value={formatMultiCurrency(stats.totalsByCurrency)}
-            change="Theo từng loại tiền"
+            change="By currency"
             changeType="positive"
             icon={DollarSign}
             iconColor="text-success"
             delay={0.1}
           />
           <StatCard
-            title="Đang chờ xử lý"
+            title="Pending"
             value={String(stats.pendingInvoices)}
-            change="Cần xem xét"
+            change="Needs review"
             changeType="neutral"
             icon={Clock}
             iconColor="text-warning"
             delay={0.2}
           />
           <StatCard
-            title="Giá trị TB"
+            title="Avg. value"
             value={formatMultiCurrencyAverage(stats.averageByCurrency)}
-            change="Mỗi hóa đơn"
+            change="Per invoice"
             changeType="neutral"
             icon={TrendingUp}
             iconColor="text-chart-2"
@@ -254,8 +254,8 @@ const Index = () => {
           <div className="lg:col-span-2">
             <InvoiceChart
               data={stats.monthlyData}
-              title="Xu hướng hóa đơn"
-              subtitle="Tổng giá trị theo thời gian"
+              title="Invoice trends"
+              subtitle="Total value over time"
             />
           </div>
           <StatusPieChart data={stats.statusDistribution} />
