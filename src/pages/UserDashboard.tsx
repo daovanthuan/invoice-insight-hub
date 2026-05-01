@@ -33,10 +33,10 @@ import { toast } from 'sonner';
 type TimeFilter = 'week' | 'month' | 'quarter' | 'year';
 
 const TIME_FILTER_LABELS: Record<TimeFilter, string> = {
-  week: 'Tuần này',
-  month: 'Tháng này',
-  quarter: 'Quý này',
-  year: 'Năm nay',
+  week: 'This week',
+  month: 'This month',
+  quarter: 'This quarter',
+  year: 'This year',
 };
 
 const getFilterDateRange = (filter: TimeFilter): { start: Date; end: Date } => {
@@ -118,7 +118,7 @@ const UserDashboard = () => {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const end = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59);
       months.push({
-        label: `T${d.getMonth() + 1}/${d.getFullYear()}`,
+        label: `${d.toLocaleDateString('en-US', { month: 'short' })} ${d.getFullYear()}`,
         start: d,
         end,
       });
@@ -156,24 +156,24 @@ const UserDashboard = () => {
   // Export to Excel
   const handleExportExcel = () => {
     if (filteredInvoices.length === 0) {
-      toast.error('Không có dữ liệu để xuất');
+      toast.error('No data to export');
       return;
     }
 
     const data = filteredInvoices.map((inv) => ({
-      'Số hóa đơn': inv.invoice_number || '',
-      'Ngày': inv.invoice_date || '',
-      'Nhà cung cấp': inv.vendor_name || '',
-      'MST NCC': inv.vendor_tax_id || '',
-      'Người mua': inv.buyer_name || '',
-      'MST NM': inv.buyer_tax_id || '',
-      'Tiền trước thuế': inv.subtotal || 0,
-      'Thuế suất (%)': inv.tax_rate || 0,
-      'Tiền thuế': inv.tax_amount || 0,
-      'Tổng tiền': inv.total_amount || 0,
-      'Loại tiền': normalizeCurrency(inv.currency),
-      'Trạng thái': inv.status,
-      'Ngày tạo': new Date(inv.created_at).toLocaleDateString('vi-VN'),
+      'Invoice Number': inv.invoice_number || '',
+      'Date': inv.invoice_date || '',
+      'Vendor': inv.vendor_name || '',
+      'Vendor Tax ID': inv.vendor_tax_id || '',
+      'Buyer': inv.buyer_name || '',
+      'Buyer Tax ID': inv.buyer_tax_id || '',
+      'Subtotal': inv.subtotal || 0,
+      'Tax Rate (%)': inv.tax_rate || 0,
+      'Tax Amount': inv.tax_amount || 0,
+      'Total': inv.total_amount || 0,
+      'Currency': normalizeCurrency(inv.currency),
+      'Status': inv.status,
+      'Created': new Date(inv.created_at).toLocaleDateString('en-US'),
     }));
 
     const wb = XLSX.utils.book_new();
@@ -185,9 +185,9 @@ const UserDashboard = () => {
     }));
     ws['!cols'] = colWidths;
 
-    XLSX.utils.book_append_sheet(wb, ws, 'Báo cáo chi tiêu');
-    XLSX.writeFile(wb, `bao-cao-chi-tieu-${TIME_FILTER_LABELS[timeFilter]}.xlsx`);
-    toast.success('Đã xuất báo cáo thành công!');
+    XLSX.utils.book_append_sheet(wb, ws, 'Spending Report');
+    XLSX.writeFile(wb, `spending-report-${timeFilter}.xlsx`);
+    toast.success('Report exported successfully!');
   };
 
   const formatByCurrency = (totals: Record<string, number>) => {
@@ -201,7 +201,7 @@ const UserDashboard = () => {
   if (loading) {
     return (
       <MainLayout>
-        <Header title="Trang chủ" subtitle="Quản lý hóa đơn của bạn" />
+        <Header title="Home" subtitle="Manage your invoices" />
         <div className="p-6">
           <div className="mb-8 grid gap-4 md:grid-cols-3">
             {[1, 2, 3].map((i) => (
@@ -217,8 +217,8 @@ const UserDashboard = () => {
   return (
     <MainLayout>
       <Header 
-        title="Trang chủ" 
-        subtitle="Quản lý hóa đơn của bạn"
+        title="Home" 
+        subtitle="Manage your invoices"
       />
       
       <div className="p-6">
@@ -226,11 +226,11 @@ const UserDashboard = () => {
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <Button onClick={() => navigate('/upload')} className="gap-2">
             <Upload className="h-4 w-4" />
-            Tải hóa đơn mới
+            Upload new invoice
           </Button>
           <Button variant="outline" className="gap-2" onClick={handleExportExcel}>
             <Download className="h-4 w-4" />
-            Xuất Excel
+            Export Excel
           </Button>
           <div className="ml-auto">
             <Select value={timeFilter} onValueChange={(v) => setTimeFilter(v as TimeFilter)}>
@@ -238,10 +238,10 @@ const UserDashboard = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="week">Tuần này</SelectItem>
-                <SelectItem value="month">Tháng này</SelectItem>
-                <SelectItem value="quarter">Quý này</SelectItem>
-                <SelectItem value="year">Năm nay</SelectItem>
+                <SelectItem value="week">This week</SelectItem>
+                <SelectItem value="month">This month</SelectItem>
+                <SelectItem value="quarter">This quarter</SelectItem>
+                <SelectItem value="year">This year</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -250,20 +250,20 @@ const UserDashboard = () => {
         {/* Spending Stats - By Currency (filtered) */}
         <div className="mb-6 space-y-4">
           <h3 className="text-sm font-medium text-muted-foreground">
-            Tổng chi tiêu — {TIME_FILTER_LABELS[timeFilter]} ({stats.filteredCount} hóa đơn)
+            Total spending — {TIME_FILTER_LABELS[timeFilter]} ({stats.filteredCount} invoices)
           </h3>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {formatByCurrency(stats.totalsByCurrency).map(({ currency, amount }) => (
               <Card key={currency} className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Tổng {currency}
+                    Total {currency}
                   </CardTitle>
                   <Wallet className="h-5 w-5 text-primary" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold text-primary">
-                    {amount.toLocaleString('vi-VN')} {currency}
+                    {amount.toLocaleString('en-US')} {currency}
                   </div>
                 </CardContent>
               </Card>
@@ -275,7 +275,7 @@ const UserDashboard = () => {
         {chartData.length > 0 && chartCurrencies.length > 0 && (
           <Card className="mb-6">
             <CardHeader>
-              <CardTitle className="text-base">Xu hướng chi tiêu 6 tháng gần nhất</CardTitle>
+              <CardTitle className="text-base">Spending trend — last 6 months</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="h-[300px]">
@@ -296,7 +296,7 @@ const UserDashboard = () => {
                         color: 'hsl(var(--card-foreground))',
                       }}
                       formatter={(value: number, name: string) => [
-                        `${value.toLocaleString('vi-VN')} ${name}`,
+                        `${value.toLocaleString('en-US')} ${name}`,
                         '',
                       ]}
                     />
@@ -324,7 +324,7 @@ const UserDashboard = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Tổng hóa đơn
+                Total invoices
               </CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
@@ -336,7 +336,7 @@ const UserDashboard = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Đã xử lý
+                Processed
               </CardTitle>
               <CheckCircle className="h-4 w-4 text-success" />
             </CardHeader>
@@ -348,7 +348,7 @@ const UserDashboard = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Đang chờ
+                Pending
               </CardTitle>
               <Clock className="h-4 w-4 text-warning" />
             </CardHeader>
@@ -361,22 +361,22 @@ const UserDashboard = () => {
         {/* Recent Invoices */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Hóa đơn gần đây</CardTitle>
+            <CardTitle>Recent invoices</CardTitle>
             <Button variant="outline" size="sm" onClick={() => navigate('/invoices')}>
-              Xem tất cả
+              View all
             </Button>
           </CardHeader>
           <CardContent>
             {recentInvoices.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <FileText className="h-12 w-12 text-muted-foreground mb-3" />
-                <p className="text-muted-foreground">Chưa có hóa đơn nào</p>
+                <p className="text-muted-foreground">No invoices yet</p>
                 <Button 
                   variant="link" 
                   onClick={() => navigate('/upload')}
                   className="mt-2"
                 >
-                  Tải lên hóa đơn đầu tiên
+                  Upload your first invoice
                 </Button>
               </div>
             ) : (
@@ -390,16 +390,16 @@ const UserDashboard = () => {
                       <FileText className="h-5 w-5 text-muted-foreground" />
                       <div>
                         <p className="font-medium text-sm">
-                          {invoice.vendor_name || invoice.invoice_number || 'Hóa đơn'}
+                          {invoice.vendor_name || invoice.invoice_number || 'Invoice'}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {invoice.invoice_date || new Date(invoice.created_at).toLocaleDateString('vi-VN')}
+                          {invoice.invoice_date || new Date(invoice.created_at).toLocaleDateString('en-US')}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-sm font-medium">
-                        {invoice.total_amount?.toLocaleString('vi-VN') || '—'}
+                        {invoice.total_amount?.toLocaleString('en-US') || '—'}
                       </span>
                       <Badge
                         variant={
@@ -411,13 +411,13 @@ const UserDashboard = () => {
                         }
                       >
                         {invoice.status === 'processed'
-                          ? 'Đã xử lý'
+                          ? 'Processed'
                           : invoice.status === 'pending'
-                          ? 'Đang chờ'
+                          ? 'Pending'
                           : invoice.status === 'rejected'
-                          ? 'Từ chối'
+                          ? 'Rejected'
                           : invoice.status === 'cancelled'
-                          ? 'Đã hủy'
+                          ? 'Cancelled'
                           : invoice.status}
                       </Badge>
                     </div>
