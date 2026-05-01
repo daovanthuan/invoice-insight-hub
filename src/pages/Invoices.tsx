@@ -52,12 +52,12 @@ const statusStyles: Record<string, string> = {
 };
 
 const statusLabels: Record<string, string> = {
-  processed: 'Đã xử lý',
-  approved: 'Đã duyệt',
-  pending: 'Đang chờ',
-  draft: 'Nháp',
-  rejected: 'Từ chối',
-  cancelled: 'Đã hủy',
+  processed: 'Processed',
+  approved: 'Approved',
+  pending: 'Pending',
+  draft: 'Draft',
+  rejected: 'Rejected',
+  cancelled: 'Cancelled',
 };
 
 type InvoiceGroup =
@@ -101,10 +101,10 @@ export default function InvoicesPage() {
     await updateInvoice(cancelId, { status: 'cancelled' });
     setIsCancelling(false);
     setCancelId(null);
-    toast.success('Đã hủy hóa đơn');
+    toast.success('Invoice cancelled');
     await createNotification({
-      title: 'Hóa đơn đã bị hủy',
-      message: `Hóa đơn "${invoiceToCancel?.invoice_number || invoiceToCancel?.invoice_serial || 'N/A'}" đã được hủy.`,
+      title: 'Invoice cancelled',
+      message: `Invoice "${invoiceToCancel?.invoice_number || invoiceToCancel?.invoice_serial || 'N/A'}" has been cancelled.`,
       type: 'warning',
       link: '/invoices',
     });
@@ -113,10 +113,10 @@ export default function InvoicesPage() {
   const handleApproveInvoice = async (invoiceId: string) => {
     const inv = invoices.find(i => i.id === invoiceId);
     await updateInvoice(invoiceId, { status: 'approved' });
-    toast.success('Đã duyệt hóa đơn');
+    toast.success('Invoice approved');
     await createNotification({
-      title: 'Hóa đơn đã được duyệt',
-      message: `Hóa đơn "${inv?.invoice_number || 'N/A'}" đã được phê duyệt.`,
+      title: 'Invoice approved',
+      message: `Invoice "${inv?.invoice_number || 'N/A'}" has been approved.`,
       type: 'success',
       link: '/invoices',
     });
@@ -125,10 +125,10 @@ export default function InvoicesPage() {
   const handleRejectInvoice = async (invoiceId: string) => {
     const inv = invoices.find(i => i.id === invoiceId);
     await updateInvoice(invoiceId, { status: 'rejected' });
-    toast.success('Đã từ chối hóa đơn');
+    toast.success('Invoice rejected');
     await createNotification({
-      title: 'Hóa đơn đã bị từ chối',
-      message: `Hóa đơn "${inv?.invoice_number || 'N/A'}" đã bị từ chối.`,
+      title: 'Invoice rejected',
+      message: `Invoice "${inv?.invoice_number || 'N/A'}" has been rejected.`,
       type: 'warning',
       link: '/invoices',
     });
@@ -136,7 +136,7 @@ export default function InvoicesPage() {
 
   const handleViewPreview = async (filePath: string | null) => {
     if (!filePath) {
-      toast.error('Không có file gốc');
+      toast.error('Original file not available');
       return;
     }
     await getPreviewUrl(filePath);
@@ -237,7 +237,7 @@ export default function InvoicesPage() {
         const { error } = await supabase.from('invoice_items').insert(itemsToInsert);
         if (error) {
           console.error('Error updating invoice items:', error);
-          toast.error('Không thể cập nhật hàng hóa');
+          toast.error('Could not update line items');
           return false;
         }
       }
@@ -253,7 +253,7 @@ export default function InvoicesPage() {
 
   const formatAmount = (amount: number | null) => {
     if (!amount) return '0';
-    return amount.toLocaleString('vi-VN');
+    return amount.toLocaleString('en-US');
   };
 
   const renderInvoiceRow = (invoice: Invoice, index: number) => {
@@ -314,11 +314,11 @@ export default function InvoicesPage() {
         )}
         <TableCell className="text-right">
           <div className="flex items-center justify-end gap-1">
-            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleViewInvoice(invoice); }} title="Xem chi tiết">
+            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleViewInvoice(invoice); }} title="View details">
               <Eye className="h-4 w-4" />
             </Button>
             {invoice.original_file_path && (
-              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleViewPreview(invoice.original_file_path); }} title="Xem file gốc" className="text-muted-foreground hover:text-primary">
+              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleViewPreview(invoice.original_file_path); }} title="View original file" className="text-muted-foreground hover:text-primary">
                 <Image className="h-4 w-4" />
               </Button>
             )}
@@ -326,18 +326,18 @@ export default function InvoicesPage() {
               <>
                 {(invoice.status === 'processed' || invoice.status === 'pending') && (
                   <>
-                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleApproveInvoice(invoice.id); }} className="text-muted-foreground hover:text-success" title="Duyệt">
+                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleApproveInvoice(invoice.id); }} className="text-muted-foreground hover:text-success" title="Approve">
                       <CheckCircle2 className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleRejectInvoice(invoice.id); }} className="text-muted-foreground hover:text-destructive" title="Từ chối">
+                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleRejectInvoice(invoice.id); }} className="text-muted-foreground hover:text-destructive" title="Reject">
                       <XCircle className="h-4 w-4" />
                     </Button>
                   </>
                 )}
-                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleEditInvoice(invoice); }} className="text-muted-foreground hover:text-primary" title="Sửa">
+                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleEditInvoice(invoice); }} className="text-muted-foreground hover:text-primary" title="Edit">
                   <Pencil className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setCancelId(invoice.id); }} className="text-muted-foreground hover:text-warning" title="Hủy hóa đơn">
+                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setCancelId(invoice.id); }} className="text-muted-foreground hover:text-warning" title="Cancel invoice">
                   <Ban className="h-4 w-4" />
                 </Button>
               </>
@@ -351,39 +351,39 @@ export default function InvoicesPage() {
   const tableHeaders = (
     <TableHeader>
       <TableRow className="border-border hover:bg-transparent">
-        <TableHead className="text-muted-foreground">Mã HĐ</TableHead>
-        <TableHead className="text-muted-foreground">Nhà cung cấp</TableHead>
-        <TableHead className="text-muted-foreground">Ngày HĐ</TableHead>
-        <TableHead className="text-muted-foreground">Tổng tiền</TableHead>
-        <TableHead className="text-muted-foreground">Trạng thái</TableHead>
-        <TableHead className="text-muted-foreground">Độ tin cậy</TableHead>
+        <TableHead className="text-muted-foreground">Invoice #</TableHead>
+        <TableHead className="text-muted-foreground">Vendor</TableHead>
+        <TableHead className="text-muted-foreground">Date</TableHead>
+        <TableHead className="text-muted-foreground">Total</TableHead>
+        <TableHead className="text-muted-foreground">Status</TableHead>
+        <TableHead className="text-muted-foreground">Confidence</TableHead>
         {isAdmin && (
           <>
-            <TableHead className="text-muted-foreground">Người tạo</TableHead>
-            <TableHead className="text-muted-foreground">Ngày tạo</TableHead>
-            <TableHead className="text-muted-foreground">Người cập nhật</TableHead>
-            <TableHead className="text-muted-foreground">Ngày cập nhật</TableHead>
+            <TableHead className="text-muted-foreground">Created by</TableHead>
+            <TableHead className="text-muted-foreground">Created at</TableHead>
+            <TableHead className="text-muted-foreground">Updated by</TableHead>
+            <TableHead className="text-muted-foreground">Updated at</TableHead>
           </>
         )}
-        <TableHead className="text-muted-foreground text-right">Thao tác</TableHead>
+        <TableHead className="text-muted-foreground text-right">Actions</TableHead>
       </TableRow>
     </TableHeader>
   );
 
   return (
     <MainLayout>
-      <Header title="Hóa Đơn" subtitle="Quản lý và xem hóa đơn đã trích xuất" />
+      <Header title="Invoices" subtitle="Manage and view extracted invoices" />
 
       <div className="p-6">
         <Tabs defaultValue="standard" className="w-full">
           <TabsList className="mb-6">
             <TabsTrigger value="standard" className="gap-2">
               <Receipt className="h-4 w-4" />
-              Hóa đơn thường
+              Standard invoices
             </TabsTrigger>
             <TabsTrigger value="broker" className="gap-2">
               <Briefcase className="h-4 w-4" />
-              Hóa đơn Broker
+              Broker invoices
             </TabsTrigger>
           </TabsList>
 
@@ -393,21 +393,21 @@ export default function InvoicesPage() {
           <div className="flex flex-wrap items-center gap-3">
             <div className="relative flex-1 min-w-[200px] max-w-md">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input placeholder="Tìm theo mã HĐ, nhà cung cấp, người mua..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 bg-muted/50" />
+              <Input placeholder="Search by invoice #, vendor, buyer..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 bg-muted/50" />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[150px] bg-muted/50">
                 <Filter className="mr-2 h-4 w-4" />
-                <SelectValue placeholder="Trạng thái" />
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tất cả TT</SelectItem>
-                <SelectItem value="processed">Đã xử lý</SelectItem>
-                <SelectItem value="approved">Đã duyệt</SelectItem>
-                <SelectItem value="pending">Đang chờ</SelectItem>
-                <SelectItem value="draft">Nháp</SelectItem>
-                <SelectItem value="rejected">Từ chối</SelectItem>
-                <SelectItem value="cancelled">Đã hủy</SelectItem>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="processed">Processed</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="cancelled">Cancelled</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -417,7 +417,7 @@ export default function InvoicesPage() {
               <PopoverTrigger asChild>
                 <Button variant="outline" className={cn("w-[160px] justify-start text-left font-normal bg-muted/50", !dateFrom && "text-muted-foreground")}>
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateFrom ? format(dateFrom, "dd/MM/yyyy") : "Từ ngày"}
+                  {dateFrom ? format(dateFrom, "dd/MM/yyyy") : "From date"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -429,7 +429,7 @@ export default function InvoicesPage() {
               <PopoverTrigger asChild>
                 <Button variant="outline" className={cn("w-[160px] justify-start text-left font-normal bg-muted/50", !dateTo && "text-muted-foreground")}>
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateTo ? format(dateTo, "dd/MM/yyyy") : "Đến ngày"}
+                  {dateTo ? format(dateTo, "dd/MM/yyyy") : "To date"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -440,31 +440,31 @@ export default function InvoicesPage() {
             {hasActiveFilters && (
               <Button variant="ghost" size="sm" onClick={clearAllFilters} className="gap-1 text-muted-foreground">
                 <X className="h-4 w-4" />
-                Xóa bộ lọc
+                Clear filters
               </Button>
             )}
 
             <div className="flex-1" />
 
             <span className="text-sm text-muted-foreground">
-              {filteredInvoices.length} / {invoices.length} hóa đơn
+              {filteredInvoices.length} / {invoices.length} invoices
             </span>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button className="gap-2" disabled={filteredInvoices.length === 0}>
                   <Download className="h-4 w-4" />
-                  Xuất dữ liệu
+                  Export
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => exportToExcel(filteredInvoices)}>
                   <FileSpreadsheet className="h-4 w-4 mr-2" />
-                  Xuất Excel (.xlsx)
+                  Export Excel (.xlsx)
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => exportToCSV(filteredInvoices)}>
                   <FileText className="h-4 w-4 mr-2" />
-                  Xuất CSV
+                  Export CSV
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -488,7 +488,7 @@ export default function InvoicesPage() {
             <div className="glass rounded-xl p-12 text-center">
               <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <p className="text-muted-foreground">
-                {invoices.length === 0 ? 'Chưa có hóa đơn nào. Hãy upload hóa đơn để bắt đầu.' : 'Không tìm thấy hóa đơn phù hợp.'}
+                {invoices.length === 0 ? 'No invoices yet. Upload invoices to get started.' : 'No matching invoices found.'}
               </p>
             </div>
           ) : (
@@ -533,10 +533,10 @@ export default function InvoicesPage() {
                           onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                           disabled={currentPage === 1}
                         >
-                          Trước
+                          Previous
                         </Button>
                         <span className="text-sm text-muted-foreground">
-                          Trang {currentPage} / {totalPages}
+                          Page {currentPage} / {totalPages}
                         </span>
                         <Button
                           variant="outline"
@@ -544,7 +544,7 @@ export default function InvoicesPage() {
                           onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                           disabled={currentPage === totalPages}
                         >
-                          Sau
+                          Next
                         </Button>
                       </div>
                     )}
@@ -561,7 +561,7 @@ export default function InvoicesPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-3">
                 <FileText className="h-5 w-5 text-primary" />
-                Chi tiết hóa đơn - {selectedInvoice?.invoice_number || selectedInvoice?.invoice_serial}
+                Invoice details - {selectedInvoice?.invoice_number || selectedInvoice?.invoice_serial}
               </DialogTitle>
             </DialogHeader>
 
@@ -571,7 +571,7 @@ export default function InvoicesPage() {
                 <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30">
                   <div className="flex items-center gap-4">
                     <div>
-                      <p className="text-xs text-muted-foreground">Độ tin cậy AI</p>
+                      <p className="text-xs text-muted-foreground">AI confidence</p>
                       {selectedInvoice.confidence_score != null ? (
                         <div className="flex items-center gap-2 mt-1">
                           <Progress value={selectedInvoice.confidence_score * 100} className={cn("h-2.5 w-24", selectedInvoice.confidence_score < 0.7 && "[&>div]:bg-warning")} />
@@ -580,67 +580,67 @@ export default function InvoicesPage() {
                           </span>
                         </div>
                       ) : (
-                        <span className="text-sm text-muted-foreground">Không có dữ liệu</span>
+                        <span className="text-sm text-muted-foreground">No data</span>
                       )}
                     </div>
                     {selectedInvoice.confidence_score != null && selectedInvoice.confidence_score < 0.7 && (
                       <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20">
-                        ⚠ Cần kiểm tra lại
+                        ⚠ Needs review
                       </Badge>
                     )}
                   </div>
                   {selectedInvoice.original_file_path && (
                     <Button variant="outline" size="sm" className="gap-2" onClick={() => handleViewPreview(selectedInvoice.original_file_path)} disabled={loadingPreview}>
                       {loadingPreview ? <Loader2 className="h-4 w-4 animate-spin" /> : <Image className="h-4 w-4" />}
-                      Xem file gốc
+                      View original file
                     </Button>
                   )}
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-3">
-                    <h4 className="font-semibold text-primary">Thông tin nhà cung cấp</h4>
+                    <h4 className="font-semibold text-primary">Vendor information</h4>
                     <div className="space-y-2 text-sm">
-                      <p><span className="text-muted-foreground">Tên:</span> {selectedInvoice.vendor_name || 'N/A'}</p>
-                      <p><span className="text-muted-foreground">MST:</span> {selectedInvoice.vendor_tax_id || 'N/A'}</p>
-                      <p><span className="text-muted-foreground">Địa chỉ:</span> {selectedInvoice.vendor_address || 'N/A'}</p>
-                      <p><span className="text-muted-foreground">SĐT:</span> {selectedInvoice.vendor_phone || 'N/A'}</p>
+                      <p><span className="text-muted-foreground">Name:</span> {selectedInvoice.vendor_name || 'N/A'}</p>
+                      <p><span className="text-muted-foreground">Tax ID:</span> {selectedInvoice.vendor_tax_id || 'N/A'}</p>
+                      <p><span className="text-muted-foreground">Address:</span> {selectedInvoice.vendor_address || 'N/A'}</p>
+                      <p><span className="text-muted-foreground">Phone:</span> {selectedInvoice.vendor_phone || 'N/A'}</p>
                     </div>
                   </div>
                   <div className="space-y-3">
-                    <h4 className="font-semibold text-primary">Thông tin người mua</h4>
+                    <h4 className="font-semibold text-primary">Buyer information</h4>
                     <div className="space-y-2 text-sm">
-                      <p><span className="text-muted-foreground">Tên:</span> {selectedInvoice.buyer_name || 'N/A'}</p>
-                      <p><span className="text-muted-foreground">MST:</span> {selectedInvoice.buyer_tax_id || 'N/A'}</p>
-                      <p><span className="text-muted-foreground">Địa chỉ:</span> {selectedInvoice.buyer_address || 'N/A'}</p>
+                      <p><span className="text-muted-foreground">Name:</span> {selectedInvoice.buyer_name || 'N/A'}</p>
+                      <p><span className="text-muted-foreground">Tax ID:</span> {selectedInvoice.buyer_tax_id || 'N/A'}</p>
+                      <p><span className="text-muted-foreground">Address:</span> {selectedInvoice.buyer_address || 'N/A'}</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-4 p-4 rounded-lg bg-muted/30">
-                  <div><p className="text-xs text-muted-foreground">Ngày hóa đơn</p><p className="font-semibold">{selectedInvoice.invoice_date || 'N/A'}</p></div>
-                  <div><p className="text-xs text-muted-foreground">Hình thức TT</p><p className="font-semibold">{selectedInvoice.payment_method || 'N/A'}</p></div>
-                  <div><p className="text-xs text-muted-foreground">Tiền tệ</p><p className="font-semibold">{selectedInvoice.currency || 'N/A'}</p></div>
-                  <div><p className="text-xs text-muted-foreground">Ký hiệu</p><p className="font-semibold">{selectedInvoice.invoice_serial || 'N/A'}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Invoice date</p><p className="font-semibold">{selectedInvoice.invoice_date || 'N/A'}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Payment method</p><p className="font-semibold">{selectedInvoice.payment_method || 'N/A'}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Currency</p><p className="font-semibold">{selectedInvoice.currency || 'N/A'}</p></div>
+                  <div><p className="text-xs text-muted-foreground">Serial</p><p className="font-semibold">{selectedInvoice.invoice_serial || 'N/A'}</p></div>
                 </div>
 
                 <div>
-                  <h4 className="mb-3 font-semibold text-primary">Danh mục hàng hóa</h4>
+                  <h4 className="mb-3 font-semibold text-primary">Line items</h4>
                   {loadingItems ? (
                     <div className="flex items-center justify-center p-8"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
                   ) : invoiceItems.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center p-4">Không có dữ liệu hàng hóa</p>
+                    <p className="text-sm text-muted-foreground text-center p-4">No line item data</p>
                   ) : (
                     <div className="rounded-lg border border-border overflow-hidden">
                       <Table>
                         <TableHeader>
                           <TableRow className="bg-muted/50">
-                            <TableHead className="text-xs">Mã</TableHead>
-                            <TableHead className="text-xs">Mô tả</TableHead>
-                            <TableHead className="text-xs">ĐVT</TableHead>
-                            <TableHead className="text-xs text-right">SL</TableHead>
-                            <TableHead className="text-xs text-right">Đơn giá</TableHead>
-                            <TableHead className="text-xs text-right">Thành tiền</TableHead>
+                            <TableHead className="text-xs">Code</TableHead>
+                            <TableHead className="text-xs">Description</TableHead>
+                            <TableHead className="text-xs">Unit</TableHead>
+                            <TableHead className="text-xs text-right">Qty</TableHead>
+                            <TableHead className="text-xs text-right">Unit price</TableHead>
+                            <TableHead className="text-xs text-right">Amount</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -663,15 +663,15 @@ export default function InvoicesPage() {
                 <div className="flex justify-end">
                   <div className="w-64 space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Cộng tiền hàng</span>
+                      <span className="text-muted-foreground">Subtotal</span>
                       <span>{formatAmount(selectedInvoice.subtotal)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Thuế ({selectedInvoice.tax_rate || '0'}%)</span>
+                      <span className="text-muted-foreground">Tax ({selectedInvoice.tax_rate || '0'}%)</span>
                       <span>{formatAmount(selectedInvoice.tax_amount)}</span>
                     </div>
                     <div className="flex justify-between pt-2 border-t border-border font-semibold text-lg">
-                      <span>Tổng cộng</span>
+                      <span>Total</span>
                       <span className="text-primary">{selectedInvoice.currency || ''} {formatAmount(selectedInvoice.total_amount)}</span>
                     </div>
                   </div>
@@ -683,7 +683,7 @@ export default function InvoicesPage() {
 
                 {selectedInvoice.extend && Object.keys(selectedInvoice.extend).length > 0 && (
                   <div className="mt-6 pt-6 border-t border-border">
-                    <h4 className="mb-3 font-semibold text-primary">Thông tin mở rộng</h4>
+                    <h4 className="mb-3 font-semibold text-primary">Additional information</h4>
                     <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                       {Object.entries(selectedInvoice.extend).map(([key, value]) => (
                         <div key={key} className="p-3 rounded-lg bg-muted/30">
@@ -703,15 +703,15 @@ export default function InvoicesPage() {
         <AlertDialog open={!!cancelId} onOpenChange={() => setCancelId(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Xác nhận hủy hóa đơn</AlertDialogTitle>
+              <AlertDialogTitle>Confirm cancel invoice</AlertDialogTitle>
               <AlertDialogDescription>
-                Hóa đơn sẽ được đánh dấu là đã hủy và không thể chỉnh sửa. Bạn vẫn có thể xem nhưng không thể thao tác gì trên hóa đơn này.
+                The invoice will be marked as cancelled and can no longer be edited. You can still view it but cannot perform any actions on it.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Đóng</AlertDialogCancel>
+              <AlertDialogCancel>Close</AlertDialogCancel>
               <AlertDialogAction onClick={handleCancelInvoice} disabled={isCancelling} className="bg-warning hover:bg-warning/90 text-warning-foreground">
-                {isCancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Hủy hóa đơn'}
+                {isCancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Cancel invoice'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -723,7 +723,7 @@ export default function InvoicesPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Image className="h-5 w-5 text-primary" />
-                Xem file gốc
+                View original file
               </DialogTitle>
             </DialogHeader>
             <div className="flex items-center justify-center min-h-[400px]">
@@ -736,7 +736,7 @@ export default function InvoicesPage() {
                   <img src={previewUrl} alt="Invoice preview" className="max-w-full max-h-[70vh] rounded-lg object-contain" />
                 )
               ) : (
-                <p className="text-muted-foreground">Không thể tải file</p>
+                <p className="text-muted-foreground">Could not load file</p>
               )}
             </div>
           </DialogContent>
@@ -790,7 +790,7 @@ function ZipInvoiceFolder({
             <div className="flex-1 min-w-0">
               <p className="font-medium text-foreground truncate">{zipName}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {invoices.length} hóa đơn · Tổng: {formatAmount(totalAmount)}
+                {invoices.length} invoices · Total: {formatAmount(totalAmount)}
               </p>
             </div>
             <Badge variant="outline" className="shrink-0">{invoices.length} file</Badge>
