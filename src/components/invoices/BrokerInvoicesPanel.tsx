@@ -104,7 +104,7 @@ export function BrokerInvoicesPanel() {
   const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const handlePreview = async (path: string | null) => {
-    if (!path) { toast.error("Không có file gốc"); return; }
+    if (!path) { toast.error("Original file not available"); return; }
     await getPreviewUrl(path, "broker-invoices");
     setShowPreview(true);
   };
@@ -112,10 +112,10 @@ export function BrokerInvoicesPanel() {
   const handleApprove = async (inv: BrokerInvoice) => {
     const ok = await updateStatus(inv.id, "completed");
     if (ok) {
-      toast.success("Đã duyệt hóa đơn broker");
+      toast.success("Broker invoice approved");
       await createNotification({
-        title: "Hóa đơn broker đã duyệt",
-        message: `${inv.client_name || inv.securities_id || "N/A"} đã được duyệt.`,
+        title: "Broker invoice approved",
+        message: `${inv.client_name || inv.securities_id || "N/A"} has been approved.`,
         type: "success",
         link: "/invoices",
       });
@@ -130,10 +130,10 @@ export function BrokerInvoicesPanel() {
     setActing(false);
     setCancelId(null);
     if (ok) {
-      toast.success("Đã hủy hóa đơn broker");
+      toast.success("Broker invoice cancelled");
       await createNotification({
-        title: "Hóa đơn broker đã hủy",
-        message: `${inv?.client_name || inv?.securities_id || "N/A"} đã bị hủy.`,
+        title: "Broker invoice cancelled",
+        message: `${inv?.client_name || inv?.securities_id || "N/A"} has been cancelled.`,
         type: "warning",
         link: "/invoices",
       });
@@ -148,7 +148,7 @@ export function BrokerInvoicesPanel() {
           <div className="relative flex-1 min-w-[200px] max-w-md">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Tìm theo khách hàng, mã CK, số TK..."
+              placeholder="Search by client, security ID, account..."
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               className="pl-9 bg-muted/50"
@@ -157,22 +157,22 @@ export function BrokerInvoicesPanel() {
           <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setCurrentPage(1); }}>
             <SelectTrigger className="w-[150px] bg-muted/50">
               <Filter className="mr-2 h-4 w-4" />
-              <SelectValue placeholder="Trạng thái" />
+              <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tất cả TT</SelectItem>
-              <SelectItem value="pending">Đang chờ</SelectItem>
-              <SelectItem value="completed">Hoàn tất</SelectItem>
-              <SelectItem value="rejected">Từ chối</SelectItem>
-              <SelectItem value="cancelled">Đã hủy</SelectItem>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="rejected">Rejected</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
           <Select value={txFilter} onValueChange={(v) => { setTxFilter(v); setCurrentPage(1); }}>
             <SelectTrigger className="w-[150px] bg-muted/50">
-              <SelectValue placeholder="Loại GD" />
+              <SelectValue placeholder="Type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tất cả loại</SelectItem>
+              <SelectItem value="all">All types</SelectItem>
               {BROKER_TX_TYPES.map((t) => (
                 <SelectItem key={t} value={t}>{BROKER_TX_TYPE_LABELS[t] || t}</SelectItem>
               ))}
@@ -185,7 +185,7 @@ export function BrokerInvoicesPanel() {
             <PopoverTrigger asChild>
               <Button variant="outline" className={cn("w-[160px] justify-start text-left font-normal bg-muted/50", !dateFrom && "text-muted-foreground")}>
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {dateFrom ? format(dateFrom, "dd/MM/yyyy") : "Từ ngày"}
+                {dateFrom ? format(dateFrom, "dd/MM/yyyy") : "From date"}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -196,7 +196,7 @@ export function BrokerInvoicesPanel() {
             <PopoverTrigger asChild>
               <Button variant="outline" className={cn("w-[160px] justify-start text-left font-normal bg-muted/50", !dateTo && "text-muted-foreground")}>
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {dateTo ? format(dateTo, "dd/MM/yyyy") : "Đến ngày"}
+                {dateTo ? format(dateTo, "dd/MM/yyyy") : "To date"}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -206,27 +206,27 @@ export function BrokerInvoicesPanel() {
 
           {hasActiveFilters && (
             <Button variant="ghost" size="sm" onClick={clearAllFilters} className="gap-1 text-muted-foreground">
-              <X className="h-4 w-4" /> Xóa bộ lọc
+              <X className="h-4 w-4" /> Clear filters
             </Button>
           )}
 
           <div className="flex-1" />
           <span className="text-sm text-muted-foreground">
-            {filtered.length} / {invoices.length} hóa đơn
+            {filtered.length} / {invoices.length} invoices
           </span>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button className="gap-2" disabled={filtered.length === 0}>
                 <Download className="h-4 w-4" />
-                Xuất dữ liệu
+                Export
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => exportBrokerToExcel(filtered)}>
-                <FileSpreadsheet className="h-4 w-4 mr-2" /> Xuất Excel (.xlsx)
+                <FileSpreadsheet className="h-4 w-4 mr-2" /> Export Excel (.xlsx)
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => exportBrokerToCSV(filtered)}>
-                <FileText className="h-4 w-4 mr-2" /> Xuất CSV
+                <FileText className="h-4 w-4 mr-2" /> Export CSV
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -244,8 +244,8 @@ export function BrokerInvoicesPanel() {
             <Briefcase className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
             <p className="text-muted-foreground">
               {invoices.length === 0
-                ? "Chưa có hóa đơn broker nào. Hãy upload để bắt đầu."
-                : "Không tìm thấy hóa đơn phù hợp."}
+                ? "No broker invoices yet. Upload to get started."
+                : "No matching invoices found."}
             </p>
           </div>
         ) : (
@@ -259,15 +259,15 @@ export function BrokerInvoicesPanel() {
                         {BROKER_FIELD_LABELS[k]}
                       </TableHead>
                     ))}
-                    <TableHead className="text-muted-foreground whitespace-nowrap">Trạng thái</TableHead>
-                    <TableHead className="text-muted-foreground whitespace-nowrap">Độ tin cậy</TableHead>
+                    <TableHead className="text-muted-foreground whitespace-nowrap">Status</TableHead>
+                    <TableHead className="text-muted-foreground whitespace-nowrap">Confidence</TableHead>
                     {isAdmin && (
                       <>
-                        <TableHead className="text-muted-foreground whitespace-nowrap">Người tạo</TableHead>
-                        <TableHead className="text-muted-foreground whitespace-nowrap">Ngày tạo</TableHead>
+                        <TableHead className="text-muted-foreground whitespace-nowrap">Created by</TableHead>
+                        <TableHead className="text-muted-foreground whitespace-nowrap">Created at</TableHead>
                       </>
                     )}
-                    <TableHead className="text-muted-foreground text-right whitespace-nowrap">Thao tác</TableHead>
+                    <TableHead className="text-muted-foreground text-right whitespace-nowrap">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -333,14 +333,14 @@ export function BrokerInvoicesPanel() {
                         )}
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setSelected(inv); }} title="Xem chi tiết">
+                            <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setSelected(inv); }} title="View details">
                               <Eye className="h-4 w-4" />
                             </Button>
                             {inv.original_file_path && (
                               <Button
                                 variant="ghost" size="icon"
                                 onClick={(e) => { e.stopPropagation(); handlePreview(inv.original_file_path); }}
-                                title="Xem file gốc"
+                                title="View original file"
                                 className="text-muted-foreground hover:text-primary"
                               >
                                 <ImageIcon className="h-4 w-4" />
@@ -351,7 +351,7 @@ export function BrokerInvoicesPanel() {
                                 variant="ghost" size="icon"
                                 onClick={(e) => { e.stopPropagation(); handleApprove(inv); }}
                                 className="text-muted-foreground hover:text-success"
-                                title="Duyệt"
+                                title="Approve"
                               >
                                 <CheckCircle2 className="h-4 w-4" />
                               </Button>
@@ -362,7 +362,7 @@ export function BrokerInvoicesPanel() {
                                   variant="ghost" size="icon"
                                   onClick={(e) => { e.stopPropagation(); setSelected(inv); }}
                                   className="text-muted-foreground hover:text-primary"
-                                  title="Sửa"
+                                  title="Edit"
                                 >
                                   <Pencil className="h-4 w-4" />
                                 </Button>
@@ -370,7 +370,7 @@ export function BrokerInvoicesPanel() {
                                   variant="ghost" size="icon"
                                   onClick={(e) => { e.stopPropagation(); setCancelId(inv.id); }}
                                   className="text-muted-foreground hover:text-warning"
-                                  title="Hủy"
+                                  title="Cancel"
                                 >
                                   <Ban className="h-4 w-4" />
                                 </Button>
@@ -387,11 +387,11 @@ export function BrokerInvoicesPanel() {
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-2 py-4">
                 <Button variant="outline" size="sm" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>
-                  Trước
+                  Previous
                 </Button>
-                <span className="text-sm text-muted-foreground">Trang {currentPage} / {totalPages}</span>
+                <span className="text-sm text-muted-foreground">Page {currentPage} / {totalPages}</span>
                 <Button variant="outline" size="sm" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
-                  Sau
+                  Next
                 </Button>
               </div>
             )}
@@ -413,19 +413,19 @@ export function BrokerInvoicesPanel() {
       <AlertDialog open={!!cancelId} onOpenChange={() => setCancelId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Xác nhận hủy hóa đơn</AlertDialogTitle>
+            <AlertDialogTitle>Confirm cancel invoice</AlertDialogTitle>
             <AlertDialogDescription>
-              Hóa đơn sẽ được đánh dấu là đã hủy và không thể chỉnh sửa.
+              The invoice will be marked as cancelled and can no longer be edited.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Đóng</AlertDialogCancel>
+            <AlertDialogCancel>Close</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleCancel}
               disabled={acting}
               className="bg-warning hover:bg-warning/90 text-warning-foreground"
             >
-              {acting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Hủy hóa đơn"}
+              {acting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Cancel invoice"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -436,7 +436,7 @@ export function BrokerInvoicesPanel() {
         <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <ImageIcon className="h-5 w-5 text-primary" /> Xem file gốc
+              <ImageIcon className="h-5 w-5 text-primary" /> View original file
             </DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-center min-h-[400px]">
@@ -449,7 +449,7 @@ export function BrokerInvoicesPanel() {
                 <img src={previewUrl} alt="Broker invoice preview" className="max-w-full max-h-[70vh] rounded-lg object-contain" />
               )
             ) : (
-              <p className="text-muted-foreground">Không thể tải file</p>
+              <p className="text-muted-foreground">Could not load file</p>
             )}
           </div>
         </DialogContent>

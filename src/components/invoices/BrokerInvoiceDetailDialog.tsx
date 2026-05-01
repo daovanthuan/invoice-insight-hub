@@ -82,7 +82,7 @@ export function BrokerInvoiceDetailDialog({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
-            <span>Hóa đơn Broker — {invoice.client_name || invoice.securities_id || "N/A"}</span>
+            <span>Broker Invoice — {invoice.client_name || invoice.securities_id || "N/A"}</span>
             <Badge variant="outline" className={cn(BROKER_STATUS_STYLES[invoice.status])}>
               {BROKER_STATUS_LABELS[invoice.status] || invoice.status}
             </Badge>
@@ -92,7 +92,7 @@ export function BrokerInvoiceDetailDialog({
         {/* Top bar: confidence + preview + edit */}
         <div className="flex items-center justify-between p-4 rounded-lg bg-muted/30">
           <div>
-            <p className="text-xs text-muted-foreground">Độ tin cậy AI</p>
+            <p className="text-xs text-muted-foreground">AI confidence</p>
             {invoice.confidence_score != null ? (
               <div className="flex items-center gap-2 mt-1">
                 <Progress
@@ -108,7 +108,7 @@ export function BrokerInvoiceDetailDialog({
                 </span>
               </div>
             ) : (
-              <span className="text-sm text-muted-foreground">Không có</span>
+              <span className="text-sm text-muted-foreground">N/A</span>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -119,21 +119,21 @@ export function BrokerInvoiceDetailDialog({
                 disabled={loadingPreview}
               >
                 {loadingPreview ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
-                Xem file gốc
+                View original file
               </Button>
             )}
             {!editing ? (
               <Button size="sm" variant="outline" className="gap-2" onClick={() => setEditing(true)}>
-                <Pencil className="h-4 w-4" /> Sửa
+                <Pencil className="h-4 w-4" /> Edit
               </Button>
             ) : (
               <>
                 <Button size="sm" variant="ghost" onClick={() => setEditing(false)} disabled={saving}>
-                  <X className="h-4 w-4 mr-1" /> Hủy
+                  <X className="h-4 w-4 mr-1" /> Cancel
                 </Button>
                 <Button size="sm" onClick={handleSave} disabled={saving} className="gap-2">
                   {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                  Lưu
+                  Save
                 </Button>
               </>
             )}
@@ -142,7 +142,7 @@ export function BrokerInvoiceDetailDialog({
 
         {/* Fields grid */}
         {visibleKeys.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center p-6">Chưa có dữ liệu trích xuất</p>
+          <p className="text-sm text-muted-foreground text-center p-6">No extracted data yet</p>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {visibleKeys.map((k) => (
@@ -157,7 +157,7 @@ export function BrokerInvoiceDetailDialog({
                     value={form[k] || ""}
                     onValueChange={(v) => setForm((p) => ({ ...p, [k]: v }))}
                   >
-                    <SelectTrigger id={`bk-${k}`}><SelectValue placeholder="Chọn..." /></SelectTrigger>
+                    <SelectTrigger id={`bk-${k}`}><SelectValue placeholder="Select..." /></SelectTrigger>
                     <SelectContent>
                       {BROKER_TX_TYPES.map((t) => (
                         <SelectItem key={t} value={t}>{BROKER_TX_TYPE_LABELS[t] || t}</SelectItem>
@@ -179,7 +179,7 @@ export function BrokerInvoiceDetailDialog({
 
         {invoice.extend && Object.keys(invoice.extend).length > 0 && (
           <div className="mt-4 pt-4 border-t border-border">
-            <h4 className="mb-3 font-semibold text-primary">Thông tin mở rộng</h4>
+            <h4 className="mb-3 font-semibold text-primary">Extended information</h4>
             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
               {Object.entries(invoice.extend).map(([key, value]) => (
                 <div key={key} className="p-3 rounded-lg bg-muted/30">
