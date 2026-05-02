@@ -114,7 +114,7 @@ export default function UploadPage() {
       const extractedData = await extractInvoice(uploadedFile.file);
 
       if (!extractedData) {
-        updateFileInEntries(uploadedFile.id, f => ({ ...f, status: 'error', error: 'Không thể trích xuất dữ liệu' }));
+        updateFileInEntries(uploadedFile.id, f => ({ ...f, status: 'error', error: 'Could not extract data' }));
         return;
       }
 
@@ -132,15 +132,15 @@ export default function UploadPage() {
         updateFileInEntries(uploadedFile.id, f => ({
           ...f,
           status: 'error',
-          error: `Hóa đơn trùng lặp (${matchedText})`,
+          error: `Duplicate invoice (${matchedText})`,
         }));
-        toast.warning(`Phát hiện hóa đơn trùng lặp: ${matchedText}`, {
+        toast.warning(`Duplicate invoice detected: ${matchedText}`, {
           description: uploadedFile.file.name,
           duration: 6000,
         });
         await createNotification({
-          title: 'Hóa đơn trùng lặp',
-          message: `File "${uploadedFile.file.name}" trùng với hóa đơn đã tồn tại (${matchedText}).`,
+          title: 'Duplicate invoice',
+          message: `File "${uploadedFile.file.name}" duplicates an existing invoice (${matchedText}).`,
           type: 'warning',
           link: '/invoices',
         });
@@ -208,25 +208,25 @@ export default function UploadPage() {
       if (invoice) {
         updateFileInEntries(uploadedFile.id, f => ({ ...f, status: 'completed', progress: 100 }));
         await createNotification({
-          title: 'Trích xuất thành công',
-          message: `Hóa đơn "${core.invoice_id || uploadedFile.file.name}" đã được trích xuất và lưu thành công.`,
+          title: 'Extraction successful',
+          message: `Invoice "${core.invoice_id || uploadedFile.file.name}" was extracted and saved successfully.`,
           type: 'success',
           link: '/invoices',
         });
       } else {
-        updateFileInEntries(uploadedFile.id, f => ({ ...f, status: 'error', error: 'Không thể lưu hóa đơn' }));
+        updateFileInEntries(uploadedFile.id, f => ({ ...f, status: 'error', error: 'Failed to save invoice' }));
         await createNotification({
-          title: 'Lưu hóa đơn thất bại',
-          message: `Không thể lưu hóa đơn "${uploadedFile.file.name}" vào cơ sở dữ liệu.`,
+          title: 'Save failed',
+          message: `Could not save invoice "${uploadedFile.file.name}" to the database.`,
           type: 'error',
         });
       }
     } catch (error) {
       console.error('Error processing file:', error);
-      updateFileInEntries(uploadedFile.id, f => ({ ...f, status: 'error', error: 'Đã xảy ra lỗi' }));
+      updateFileInEntries(uploadedFile.id, f => ({ ...f, status: 'error', error: 'An error occurred' }));
       await createNotification({
-        title: 'Lỗi xử lý hóa đơn',
-        message: `Đã xảy ra lỗi khi xử lý file "${uploadedFile.file.name}".`,
+        title: 'Invoice processing error',
+        message: `An error occurred while processing file "${uploadedFile.file.name}".`,
         type: 'error',
       });
     }
@@ -264,7 +264,7 @@ export default function UploadPage() {
       return extractedFiles;
     } catch (error) {
       console.error('Error extracting ZIP:', error);
-      toast.error(`Lỗi giải nén file ZIP: ${zipFile.name}`);
+      toast.error(`Failed to extract ZIP file: ${zipFile.name}`);
       return [];
     }
   };
@@ -287,14 +287,14 @@ export default function UploadPage() {
     // Process ZIP files
     const newZipEntries: FileEntry[] = [];
     for (const zipFile of zipFiles) {
-      toast.info(`Đang giải nén ${zipFile.name}...`);
+      toast.info(`Extracting ${zipFile.name}...`);
       await uploadFileToStorage(zipFile);
       const extracted = await extractFilesFromZip(zipFile);
       if (extracted.length === 0) {
-        toast.error(`Không tìm thấy file hóa đơn trong ${zipFile.name}`);
+        toast.error(`No invoice files found in ${zipFile.name}`);
         continue;
       }
-      toast.success(`Đã giải nén ${extracted.length} file từ ${zipFile.name}`);
+      toast.success(`Extracted ${extracted.length} files from ${zipFile.name}`);
       const zipGroup: ZipGroup = {
         id: crypto.randomUUID(),
         zipName: zipFile.name,
@@ -310,7 +310,7 @@ export default function UploadPage() {
 
     const allNewEntries = [...newSingleEntries, ...newZipEntries];
     if (allNewEntries.length === 0 && singleFiles.length === 0 && zipFiles.length === 0) {
-      toast.error('Không tìm thấy file hóa đơn hợp lệ (PNG, JPG, WEBP, PDF, ZIP)');
+      toast.error('No valid invoice files found (PNG, JPG, WEBP, PDF, ZIP)');
       return;
     }
 
@@ -362,10 +362,10 @@ export default function UploadPage() {
 
   const getStatusText = (status: UploadedFile['status']) => {
     switch (status) {
-      case 'uploading': return 'Đang tải lên...';
-      case 'processing': return 'Đang trích xuất...';
-      case 'completed': return 'Hoàn tất';
-      case 'error': return 'Thất bại';
+      case 'uploading': return 'Uploading...';
+      case 'processing': return 'Extracting...';
+      case 'completed': return 'Completed';
+      case 'error': return 'Failed';
     }
   };
 
@@ -402,18 +402,18 @@ export default function UploadPage() {
 
   return (
     <MainLayout>
-      <Header title="Tải Lên Hóa Đơn" subtitle="Upload ảnh, PDF hoặc file ZIP chứa hóa đơn để AI trích xuất dữ liệu" />
+      <Header title="Upload Invoices" subtitle="Upload images, PDFs, or ZIP files for AI to extract data" />
 
       <div className="p-6">
         <Tabs defaultValue="standard" className="w-full">
           <TabsList className="mb-6">
             <TabsTrigger value="standard" className="gap-2">
               <Receipt className="h-4 w-4" />
-              Hóa đơn thường
+              Standard Invoices
             </TabsTrigger>
             <TabsTrigger value="broker" className="gap-2">
               <Briefcase className="h-4 w-4" />
-              Hóa đơn Broker
+              Broker Invoices
             </TabsTrigger>
           </TabsList>
 
@@ -435,13 +435,13 @@ export default function UploadPage() {
               <div className={cn('mb-4 rounded-full p-4 transition-colors', isDragging ? 'bg-primary/20' : 'bg-muted')}>
                 <UploadIcon className={cn('h-10 w-10 transition-colors', isDragging ? 'text-primary' : 'text-muted-foreground')} />
               </div>
-              <p className="mb-2 text-lg font-semibold text-foreground">{isDragging ? 'Thả file vào đây' : 'Kéo & thả hóa đơn'}</p>
-              <p className="text-sm text-muted-foreground mb-4">hoặc click để chọn file (PNG, JPG, WEBP, PDF, ZIP)</p>
+              <p className="mb-2 text-lg font-semibold text-foreground">{isDragging ? 'Drop files here' : 'Drag & drop invoices'}</p>
+              <p className="text-sm text-muted-foreground mb-4">or click to select files (PNG, JPG, WEBP, PDF, ZIP)</p>
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
                 <Archive className="h-4 w-4" />
-                <span>Hỗ trợ file ZIP chứa nhiều hóa đơn</span>
+                <span>Supports ZIP files with multiple invoices</span>
               </div>
-              <Button variant="outline" className="pointer-events-none">Chọn File</Button>
+              <Button variant="outline" className="pointer-events-none">Choose File</Button>
             </motion.div>
             <input
               id="file-upload"
@@ -466,10 +466,10 @@ export default function UploadPage() {
             >
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-foreground">
-                  File đã tải ({allFiles.length})
+                  Uploaded files ({allFiles.length})
                 </h3>
                 {completedCount > 0 && (
-                  <Button onClick={() => navigate('/invoices')} size="sm">Xem hóa đơn đã trích xuất</Button>
+                  <Button onClick={() => navigate('/invoices')} size="sm">View extracted invoices</Button>
                 )}
               </div>
 
@@ -506,10 +506,10 @@ export default function UploadPage() {
 
         {/* Info Section */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mt-8 grid gap-6 md:grid-cols-3">
-          {[
-            { title: 'AI Vision', description: 'Sử dụng Gemini 2.5 Flash để trích xuất chính xác văn bản từ ảnh hóa đơn' },
-            { title: 'Lưu Trữ An Toàn', description: 'Dữ liệu được lưu trữ bảo mật với mã hóa và phân quyền người dùng' },
-            { title: 'Độ Chính Xác Cao', description: 'Trích xuất số liệu và văn bản với độ chính xác trên 95%' },
+          [
+            { title: 'AI Vision', description: 'Uses Gemini 2.5 Flash to accurately extract text from invoice images' },
+            { title: 'Secure Storage', description: 'Data is stored securely with encryption and per-user access control' },
+            { title: 'High Accuracy', description: 'Extracts numbers and text with over 95% accuracy' },
           ].map((item, idx) => (
             <div key={idx} className="rounded-xl bg-muted/30 p-6">
               <h4 className="mb-2 font-semibold text-foreground">{item.title}</h4>
