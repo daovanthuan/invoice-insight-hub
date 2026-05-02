@@ -506,7 +506,7 @@ export default function UploadPage() {
 
         {/* Info Section */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="mt-8 grid gap-6 md:grid-cols-3">
-          [
+          {[
             { title: 'AI Vision', description: 'Uses Gemini 2.5 Flash to accurately extract text from invoice images' },
             { title: 'Secure Storage', description: 'Data is stored securely with encryption and per-user access control' },
             { title: 'High Accuracy', description: 'Extracts numbers and text with over 95% accuracy' },
