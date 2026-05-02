@@ -4,12 +4,12 @@ import { BrokerInvoice } from "@/types/database";
 import { BROKER_FIELD_LABELS, BROKER_STATUS_LABELS, getBrokerVisibleFields, formatBrokerValue } from "@/lib/brokerFields";
 
 const statusLabels: Record<string, string> = {
-  processed: "Đã xử lý",
-  approved: "Đã duyệt",
-  pending: "Đang chờ",
-  draft: "Nháp",
-  rejected: "Từ chối",
-  cancelled: "Đã hủy",
+  processed: "Processed",
+  approved: "Approved",
+  pending: "Pending",
+  draft: "Draft",
+  rejected: "Rejected",
+  cancelled: "Cancelled",
 };
 
 const mapInvoiceRow = (inv: Invoice) => ({

@@ -11,7 +11,7 @@ export const useInvoicePreview = () => {
     bucket: string = "invoices"
   ): Promise<string | null> => {
     if (!filePath) {
-      toast.error("Không có file gốc cho hóa đơn này");
+      toast.error("No source file for this invoice");
       return null;
     }
 
@@ -23,7 +23,7 @@ export const useInvoicePreview = () => {
 
       if (error) {
         console.error("Error getting signed URL:", error);
-        toast.error("Không thể tải file gốc");
+        toast.error("Failed to load source file");
         return null;
       }
 
@@ -31,7 +31,7 @@ export const useInvoicePreview = () => {
       return data.signedUrl;
     } catch (error) {
       console.error("Error:", error);
-      toast.error("Lỗi khi tải file gốc");
+      toast.error("Error loading source file");
       return null;
     } finally {
       setLoadingPreview(false);

@@ -24,7 +24,7 @@ export const useBrokerInvoices = () => {
       setInvoices((data as unknown as BrokerInvoice[]) || []);
     } catch (e) {
       console.error("Error fetching broker invoices:", e);
-      toast.error("Không thể tải danh sách hóa đơn broker");
+      toast.error("Failed to load broker invoices");
     } finally {
       setLoading(false);
     }
@@ -32,7 +32,7 @@ export const useBrokerInvoices = () => {
 
   const updateInvoice = async (id: string, updates: Partial<BrokerInvoice>) => {
     if (!user) {
-      toast.error("Vui lòng đăng nhập");
+      toast.error("Please sign in");
       return false;
     }
     try {
@@ -48,7 +48,7 @@ export const useBrokerInvoices = () => {
       return true;
     } catch (e) {
       console.error("Error updating broker invoice:", e);
-      toast.error("Không thể cập nhật hóa đơn broker");
+      toast.error("Failed to update broker invoice");
       return false;
     }
   };
@@ -61,10 +61,10 @@ export const useBrokerInvoices = () => {
       const { error } = await supabase.from("broker_invoices").delete().eq("id", id);
       if (error) throw error;
       await fetchInvoices();
-      toast.success("Đã xóa hóa đơn broker");
+      toast.success("Broker invoice deleted");
     } catch (e) {
       console.error("Error deleting broker invoice:", e);
-      toast.error("Không thể xóa hóa đơn broker");
+      toast.error("Failed to delete broker invoice");
     }
   };
 

@@ -61,7 +61,7 @@ export const useInvoices = () => {
       setInvoices((data as Invoice[]) || []);
     } catch (error) {
       console.error("Error fetching invoices:", error);
-      toast.error("Không thể tải danh sách hóa đơn");
+      toast.error("Failed to load invoices");
     } finally {
       setLoading(false);
     }
@@ -88,7 +88,7 @@ export const useInvoices = () => {
     items?: Partial<InvoiceItem>[]
   ) => {
     if (!user) {
-      toast.error("Vui lòng đăng nhập để tạo hóa đơn");
+      toast.error("Please sign in to create invoice");
       return null;
     }
 
@@ -128,14 +128,14 @@ export const useInvoices = () => {
       return invoice;
     } catch (error) {
       console.error("Error creating invoice:", error);
-      toast.error("Không thể tạo hóa đơn");
+      toast.error("Failed to create invoice");
       return null;
     }
   };
 
   const updateInvoice = async (invoiceId: string, updates: Partial<Invoice>) => {
     if (!user) {
-      toast.error("Vui lòng đăng nhập");
+      toast.error("Please sign in");
       return false;
     }
 
@@ -162,7 +162,7 @@ export const useInvoices = () => {
       return true;
     } catch (error) {
       console.error("Error updating invoice:", error);
-      toast.error("Không thể cập nhật hóa đơn");
+      toast.error("Failed to update invoice");
       return false;
     }
   };
@@ -177,10 +177,10 @@ export const useInvoices = () => {
 
       if (error) throw error;
       await fetchInvoices();
-      toast.success("Đã xóa hóa đơn");
+      toast.success("Invoice deleted");
     } catch (error) {
       console.error("Error deleting invoice:", error);
-      toast.error("Không thể xóa hóa đơn");
+      toast.error("Failed to delete invoice");
     }
   };
 

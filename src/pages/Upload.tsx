@@ -566,7 +566,7 @@ function ZipFolder({
                   <Loader2 className="h-4 w-4 animate-spin text-primary" />
                 )}
                 <span className="text-xs text-muted-foreground">
-                  {status.completed}/{status.total} hoàn tất
+                  {status.completed}/{status.total} completed
                 </span>
               </div>
             </div>
