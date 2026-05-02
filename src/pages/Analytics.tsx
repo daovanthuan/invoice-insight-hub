@@ -36,7 +36,7 @@ const formatCurrency = (amount: number): string => {
   } else if (amount >= 1_000) {
     return `${(amount / 1_000).toFixed(1)}K`;
   }
-  return amount.toLocaleString('vi-VN', { maximumFractionDigits: 0 });
+  return amount.toLocaleString('en-US', { maximumFractionDigits: 0 });
 };
 
 export default function AnalyticsPage() {
@@ -84,7 +84,7 @@ export default function AnalyticsPage() {
     const processedRate = invoices.length > 0 ? Math.round((processedCount / invoices.length) * 100) : 0;
 
     // Weekly data (group by day of week)
-    const weekDays = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+    const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const weeklyData = weekDays.map((day, idx) => {
       const dayInvoices = thisWeekInvoices.filter((inv) => {
         const date = new Date(inv.created_at);
@@ -100,7 +100,7 @@ export default function AnalyticsPage() {
     // Monthly success rate (processed / total per month)
     const monthlyRateMap = invoices.reduce((acc: Record<string, { total: number; processed: number }>, inv) => {
       const date = new Date(inv.created_at);
-      const monthKey = date.toLocaleDateString('vi-VN', { month: 'short', year: '2-digit' });
+      const monthKey = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
       if (!acc[monthKey]) {
         acc[monthKey] = { total: 0, processed: 0 };
       }
@@ -143,7 +143,7 @@ export default function AnalyticsPage() {
         try {
           const d = new Date(date);
           if (!isNaN(d.getTime())) {
-            month = d.toLocaleDateString('vi-VN', { month: 'short', year: '2-digit' });
+            month = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
           }
         } catch {
           month = 'Unknown';
@@ -204,7 +204,7 @@ export default function AnalyticsPage() {
   if (loading) {
     return (
       <MainLayout>
-        <Header title="Thống kê" subtitle="Phân tích chi tiết dữ liệu hóa đơn" />
+        <Header title="Analytics" subtitle="Detailed invoice data analysis" />
         <div className="p-6 space-y-8">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             {[1, 2, 3, 4].map((i) => (
@@ -222,41 +222,41 @@ export default function AnalyticsPage() {
 
   return (
     <MainLayout>
-      <Header title="Thống kê" subtitle="Phân tích chi tiết dữ liệu hóa đơn" />
+      <Header title="Analytics" subtitle="Detailed invoice data analysis" />
 
       <div className="p-6 space-y-8">
         {/* Top Stats */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
-            title="Tuần này"
+            title="This Week"
             value={stats.thisWeekCount.toString()}
-            change={`${stats.weeklyChange >= 0 ? '+' : ''}${stats.weeklyChange}% so với tuần trước`}
+            change={`${stats.weeklyChange >= 0 ? '+' : ''}${stats.weeklyChange}% vs last week`}
             changeType={stats.weeklyChange >= 0 ? 'positive' : 'negative'}
             icon={FileText}
             delay={0}
           />
           <StatCard
-            title="Doanh thu tuần"
+            title="Weekly Revenue"
             value={formatCurrency(stats.thisWeekRevenue)}
-            change={`${stats.revenueChange >= 0 ? '+' : ''}${stats.revenueChange}% so với tuần trước`}
+            change={`${stats.revenueChange >= 0 ? '+' : ''}${stats.revenueChange}% vs last week`}
             changeType={stats.revenueChange >= 0 ? 'positive' : 'negative'}
             icon={DollarSign}
             iconColor="text-success"
             delay={0.1}
           />
           <StatCard
-            title="Nhà cung cấp"
+            title="Vendors"
             value={stats.activeVendors.toString()}
-            change="Nhà cung cấp hoạt động"
+            change="Active vendors"
             changeType="neutral"
             icon={Users}
             iconColor="text-chart-2"
             delay={0.2}
           />
           <StatCard
-            title="Tỷ lệ xử lý"
+            title="Processing Rate"
             value={`${stats.processedRate}%`}
-            change="Hóa đơn đã xử lý"
+            change="Processed invoices"
             changeType={stats.processedRate >= 80 ? 'positive' : 'neutral'}
             icon={CheckCircle}
             iconColor="text-chart-5"
@@ -274,8 +274,8 @@ export default function AnalyticsPage() {
             className="glass rounded-xl p-6"
           >
             <div className="mb-6">
-              <h3 className="text-lg font-semibold text-foreground">Hoạt động tuần này</h3>
-              <p className="text-sm text-muted-foreground">Hóa đơn xử lý theo ngày</p>
+              <h3 className="text-lg font-semibold text-foreground">This Week's Activity</h3>
+              <p className="text-sm text-muted-foreground">Invoices processed by day</p>
             </div>
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -290,7 +290,7 @@ export default function AnalyticsPage() {
                       borderRadius: '8px',
                       color: 'hsl(var(--popover-foreground))',
                     }}
-                    formatter={(value: number) => [value, 'Hóa đơn']}
+                    formatter={(value: number) => [value, 'Invoices']}
                   />
                   <Bar dataKey="invoices" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                 </BarChart>
@@ -306,8 +306,8 @@ export default function AnalyticsPage() {
             className="glass rounded-xl p-6"
           >
             <div className="mb-6">
-              <h3 className="text-lg font-semibold text-foreground">Tỷ lệ xử lý thành công</h3>
-              <p className="text-sm text-muted-foreground">Xu hướng theo tháng</p>
+              <h3 className="text-lg font-semibold text-foreground">Success Rate</h3>
+              <p className="text-sm text-muted-foreground">Monthly trend</p>
             </div>
             <div className="h-[300px]">
               {stats.successRateData.length > 0 ? (
@@ -328,7 +328,7 @@ export default function AnalyticsPage() {
                         borderRadius: '8px',
                         color: 'hsl(var(--popover-foreground))',
                       }}
-                      formatter={(value) => [`${value}%`, 'Tỷ lệ thành công']}
+                      formatter={(value) => [`${value}%`, 'Success rate']}
                     />
                     <Line
                       type="monotone"
@@ -341,7 +341,7 @@ export default function AnalyticsPage() {
                 </ResponsiveContainer>
               ) : (
                 <div className="flex items-center justify-center h-full text-muted-foreground">
-                  Chưa có dữ liệu
+                  No data yet
                 </div>
               )}
             </div>
@@ -353,8 +353,8 @@ export default function AnalyticsPage() {
           <div className="lg:col-span-2">
             <InvoiceChart
               data={stats.monthlyData}
-              title="Xu hướng doanh thu"
-              subtitle="Tổng giá trị hóa đơn theo tháng"
+              title="Revenue Trend"
+              subtitle="Total invoice value by month"
             />
           </div>
           <StatusPieChart data={stats.statusDistribution} />
@@ -370,8 +370,8 @@ export default function AnalyticsPage() {
             className="glass rounded-xl p-6"
           >
             <div className="mb-6">
-              <h3 className="text-lg font-semibold text-foreground">Phân bố tiền tệ</h3>
-              <p className="text-sm text-muted-foreground">Hóa đơn theo loại tiền tệ</p>
+              <h3 className="text-lg font-semibold text-foreground">Currency Distribution</h3>
+              <p className="text-sm text-muted-foreground">Invoices by currency</p>
             </div>
             <div className="space-y-4">
               {stats.currencyData.length > 0 ? (
@@ -380,7 +380,7 @@ export default function AnalyticsPage() {
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-foreground">{item.currency}</span>
                       <span className="text-sm text-muted-foreground">
-                        {item.count} hóa đơn ({item.percentage}%)
+                        {item.count} invoices ({item.percentage}%)
                       </span>
                     </div>
                     <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -398,7 +398,7 @@ export default function AnalyticsPage() {
                 ))
               ) : (
                 <div className="text-center text-muted-foreground py-8">
-                  Chưa có dữ liệu
+                  No data yet
                 </div>
               )}
             </div>
