@@ -55,7 +55,7 @@ export const useUserSettings = () => {
       }
     } catch (error) {
       console.error("Error fetching settings:", error);
-      toast.error("Không thể tải cài đặt");
+      toast.error("Failed to load settings");
     } finally {
       setLoading(false);
     }
@@ -63,7 +63,7 @@ export const useUserSettings = () => {
 
   const updateSettings = async (updates: Partial<UserSettings>) => {
     if (!user || !settings) {
-      toast.error("Vui lòng đăng nhập");
+      toast.error("Please sign in");
       return false;
     }
 
@@ -77,11 +77,11 @@ export const useUserSettings = () => {
       if (error) throw error;
 
       setSettings((prev) => prev ? { ...prev, ...updates } : null);
-      toast.success("Đã lưu cài đặt");
+      toast.success("Settings saved");
       return true;
     } catch (error) {
       console.error("Error updating settings:", error);
-      toast.error("Không thể lưu cài đặt");
+      toast.error("Failed to save settings");
       return false;
     } finally {
       setSaving(false);
