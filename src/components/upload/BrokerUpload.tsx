@@ -124,7 +124,7 @@ export function BrokerUpload() {
 
       const result = await extractBroker(bf.file);
       if (!result) {
-        update(bf.id, (f) => ({ ...f, status: "error", error: "Không thể trích xuất" }));
+        update(bf.id, (f) => ({ ...f, status: "error", error: "Extraction failed" }));
         return;
       }
 
@@ -135,16 +135,16 @@ export function BrokerUpload() {
       await saveBroker(result.data, result.confidence_score, result.extend, filePath || null, sourceZip || null);
       update(bf.id, (f) => ({ ...f, status: autoComplete ? "completed" : "pending", progress: 100 }));
       await createNotification({
-        title: autoComplete ? "Hóa đơn broker đã lưu" : "Hóa đơn broker cần kiểm tra",
+        title: autoComplete ? "Broker invoice saved" : "Broker invoice needs review",
         message: autoComplete
-          ? `${bf.file.name} đã trích xuất tự động (${Math.round(result.confidence_score * 100)}%)`
-          : `${bf.file.name} đã lưu, vui lòng kiểm tra trong tab Broker (${Math.round(result.confidence_score * 100)}%)`,
+          ? `${bf.file.name} auto-extracted (${Math.round(result.confidence_score * 100)}%)`
+          : `${bf.file.name} saved, please review in the Broker tab (${Math.round(result.confidence_score * 100)}%)`,
         type: autoComplete ? "success" : "warning",
         link: "/invoices",
       });
     } catch (e) {
       console.error(e);
-      const msg = e instanceof Error ? e.message : "Lỗi xử lý";
+      const msg = e instanceof Error ? e.message : "Processing error";
       update(bf.id, (f) => ({ ...f, status: "error", error: msg }));
     }
   };
@@ -154,8 +154,8 @@ export function BrokerUpload() {
     const id = crypto.randomUUID();
     const bf: BrokerFile = { id, file, status: "uploading", progress: 0 };
     setFiles((prev) => [...prev, bf]);
-    update(id, (f) => ({ ...f, status: "error", error: "Excel/CSV import sẽ được hỗ trợ trong bản tiếp theo" }));
-    toast.info("Excel/CSV: sẽ hỗ trợ import bulk trong phiên bản kế tiếp");
+    update(id, (f) => ({ ...f, status: "error", error: "Excel/CSV import will be supported in a future release" }));
+    toast.info("Excel/CSV: bulk import will be supported in a future release");
   };
 
   const handleFiles = async (input: File[]) => {
@@ -165,7 +165,7 @@ export function BrokerUpload() {
       if (isZip(f)) zips.push(f);
       else if (isExcelCsv(f)) processExcelCsv(f);
       else if (VALID_IMAGE_PDF.includes(f.type)) singles.push(f);
-      else toast.warning(`Bỏ qua file không hỗ trợ: ${f.name}`);
+      else toast.warning(`Skipping unsupported file: ${f.name}`);
     }
 
     const newSingles: BrokerFile[] = singles.map((file) => ({
@@ -178,7 +178,7 @@ export function BrokerUpload() {
     newSingles.forEach((bf) => processOne(bf));
 
     for (const zipFile of zips) {
-      toast.info(`Đang giải nén ${zipFile.name}...`);
+      toast.info(`Extracting ${zipFile.name}...`);
       try {
         const zip = await JSZip.loadAsync(zipFile);
         const inner: File[] = [];
@@ -201,7 +201,7 @@ export function BrokerUpload() {
         });
         await Promise.all(promises);
         if (inner.length === 0) {
-          toast.error(`${zipFile.name}: không có file hợp lệ`);
+          toast.error(`${zipFile.name}: no valid files`);
           continue;
         }
         const newOnes: BrokerFile[] = inner.map((file) => ({
@@ -211,7 +211,7 @@ export function BrokerUpload() {
         newOnes.forEach((bf) => processOne(bf, zipFile.name));
       } catch (e) {
         console.error(e);
-        toast.error(`Lỗi giải nén ${zipFile.name}`);
+        toast.error(`Failed to extract ${zipFile.name}`);
       }
     }
   };
@@ -241,11 +241,11 @@ export function BrokerUpload() {
 
   const statusText = (f: BrokerFile) => {
     switch (f.status) {
-      case "uploading": return "Đang tải lên...";
-      case "processing": return "Đang trích xuất...";
-      case "pending": return `Đã lưu - cần kiểm tra (${Math.round((f.result?.confidence_score || 0) * 100)}%)`;
-      case "completed": return `Hoàn tất (${Math.round((f.result?.confidence_score || 0) * 100)}%)`;
-      case "error": return f.error || "Thất bại";
+      case "uploading": return "Uploading...";
+      case "processing": return "Extracting...";
+      case "pending": return `Saved - needs review (${Math.round((f.result?.confidence_score || 0) * 100)}%)`;
+      case "completed": return `Completed (${Math.round((f.result?.confidence_score || 0) * 100)}%)`;
+      case "error": return f.error || "Failed";
     }
   };
 
@@ -267,16 +267,16 @@ export function BrokerUpload() {
               <UploadIcon className={cn("h-10 w-10 transition-colors", isDragging ? "text-primary" : "text-muted-foreground")} />
             </div>
             <p className="mb-2 text-lg font-semibold text-foreground">
-              {isDragging ? "Thả file vào đây" : "Kéo & thả hóa đơn Broker"}
+              {isDragging ? "Drop files here" : "Drag & drop broker invoices"}
             </p>
             <p className="text-sm text-muted-foreground mb-4">
-              hoặc click để chọn file (PNG, JPG, WEBP, PDF, ZIP)
+              or click to select files (PNG, JPG, WEBP, PDF, ZIP)
             </p>
             <div className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
               <Archive className="h-4 w-4" />
-              <span>Hỗ trợ file ZIP chứa nhiều hóa đơn</span>
+              <span>Supports ZIP files with multiple invoices</span>
             </div>
-            <Button variant="outline" className="pointer-events-none">Chọn File</Button>
+            <Button variant="outline" className="pointer-events-none">Choose File</Button>
           </motion.div>
           <input
             id="broker-upload"
@@ -303,7 +303,7 @@ export function BrokerUpload() {
           >
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-foreground">
-                File đã tải ({files.length})
+                Uploaded files ({files.length})
               </h3>
             </div>
             <div className="space-y-3">

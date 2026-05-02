@@ -28,7 +28,7 @@ export const useProfile = () => {
       setProfile(data as Profile | null);
     } catch (error) {
       console.error("Error fetching profile:", error);
-      toast.error("Không thể tải thông tin hồ sơ");
+      toast.error("Failed to load profile");
     } finally {
       setLoading(false);
     }
@@ -36,7 +36,7 @@ export const useProfile = () => {
 
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) {
-      toast.error("Vui lòng đăng nhập");
+      toast.error("Please sign in");
       return false;
     }
 
@@ -50,11 +50,11 @@ export const useProfile = () => {
       if (error) throw error;
 
       setProfile((prev) => prev ? { ...prev, ...updates } : null);
-      toast.success("Đã cập nhật hồ sơ");
+      toast.success("Profile updated");
       return true;
     } catch (error) {
       console.error("Error updating profile:", error);
-      toast.error("Không thể cập nhật hồ sơ");
+      toast.error("Failed to update profile");
       return false;
     } finally {
       setSaving(false);

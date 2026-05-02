@@ -167,8 +167,8 @@ const UserManagement = () => {
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
-        title: 'Lỗi',
-        description: 'Không thể tải danh sách người dùng',
+        title: 'Error',
+        description: 'Failed to load user list',
         variant: 'destructive',
       });
     } finally {
@@ -196,14 +196,14 @@ const UserManagement = () => {
       );
 
       toast({
-        title: 'Thành công',
-        description: `Đã cập nhật vai trò thành ${newRole?.name || 'unknown'}`,
+        title: 'Success',
+        description: `Role updated to ${newRole?.name || 'unknown'}`,
       });
     } catch (error) {
       console.error('Error updating role:', error);
       toast({
-        title: 'Lỗi',
-        description: 'Không thể cập nhật vai trò',
+        title: 'Error',
+        description: 'Failed to update role',
         variant: 'destructive',
       });
     } finally {
@@ -229,16 +229,16 @@ const UserManagement = () => {
       );
 
       toast({
-        title: 'Thành công',
+        title: 'Success',
         description: newStatus === 'active' 
-          ? 'Đã kích hoạt tài khoản' 
-          : 'Đã vô hiệu hóa tài khoản',
+          ? 'Account activated' 
+          : 'Account deactivated',
       });
     } catch (error) {
       console.error('Error toggling user status:', error);
       toast({
-        title: 'Lỗi',
-        description: 'Không thể thay đổi trạng thái tài khoản',
+        title: 'Error',
+        description: 'Failed to change account status',
         variant: 'destructive',
       });
     } finally {
@@ -310,15 +310,15 @@ const UserManagement = () => {
       );
 
       toast({
-        title: 'Thành công',
-        description: 'Đã cập nhật thông tin người dùng',
+        title: 'Success',
+        description: 'User information updated',
       });
       closeDialog();
     } catch (error) {
       console.error('Error updating user:', error);
       toast({
-        title: 'Lỗi',
-        description: 'Không thể cập nhật thông tin người dùng',
+        title: 'Error',
+        description: 'Failed to update user information',
         variant: 'destructive',
       });
     } finally {
@@ -328,9 +328,9 @@ const UserManagement = () => {
 
   const getGenderLabel = (gender: string | null) => {
     switch (gender) {
-      case 'male': return 'Nam';
-      case 'female': return 'Nữ';
-      case 'other': return 'Khác';
+      case 'male': return 'Male';
+      case 'female': return 'Female';
+      case 'other': return 'Other';
       default: return '-';
     }
   };
@@ -344,7 +344,7 @@ const UserManagement = () => {
   if (loading) {
     return (
       <MainLayout>
-        <Header title="Quản lý người dùng" subtitle="Quản lý vai trò và quyền hạn" />
+        <Header title="User Management" subtitle="Manage roles and permissions" />
         <div className="p-6">
           <div className="mb-6 grid gap-4 md:grid-cols-3">
             {[1, 2, 3].map((i) => (
@@ -360,8 +360,8 @@ const UserManagement = () => {
   return (
     <MainLayout>
       <Header 
-        title="Quản lý người dùng" 
-        subtitle="Quản lý vai trò và quyền hạn"
+        title="User Management" 
+        subtitle="Manage roles and permissions"
       />
       
       <div className="p-6">
@@ -370,7 +370,7 @@ const UserManagement = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Tổng người dùng
+                Total Users
               </CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
@@ -382,7 +382,7 @@ const UserManagement = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Quản trị viên
+                Administrators
               </CardTitle>
               <Shield className="h-4 w-4 text-primary" />
             </CardHeader>
@@ -394,7 +394,7 @@ const UserManagement = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Người dùng thường
+                Regular Users
               </CardTitle>
               <User className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
@@ -407,30 +407,30 @@ const UserManagement = () => {
         {/* Users Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Danh sách người dùng</CardTitle>
+            <CardTitle>User List</CardTitle>
           </CardHeader>
           <CardContent>
             {users.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Users className="h-12 w-12 text-muted-foreground mb-3" />
-                <p className="text-muted-foreground">Chưa có người dùng nào</p>
+                <p className="text-muted-foreground">No users yet</p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Người dùng</TableHead>
-                    <TableHead>Mã NV</TableHead>
-                    <TableHead>SĐT</TableHead>
-                    <TableHead>Giới tính</TableHead>
-                    <TableHead>Ngày sinh</TableHead>
-                    <TableHead>Ngày tạo</TableHead>
-                    <TableHead>Cập nhật</TableHead>
-                    <TableHead>Sửa bởi</TableHead>
-                    <TableHead>Trạng thái</TableHead>
-                    <TableHead>Vai trò</TableHead>
-                    <TableHead>Thay đổi vai trò</TableHead>
-                    <TableHead>Hành động</TableHead>
+                    <TableHead>User</TableHead>
+                    <TableHead>Employee ID</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Gender</TableHead>
+                    <TableHead>Date of Birth</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Updated</TableHead>
+                    <TableHead>Updated By</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Change Role</TableHead>
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -478,12 +478,12 @@ const UserManagement = () => {
                           {user.status === 'active' ? (
                             <>
                               <CheckCircle className="h-3 w-3 mr-1" />
-                              Hoạt động
+                              Active
                             </>
                           ) : (
                             <>
                               <Ban className="h-3 w-3 mr-1" />
-                              Vô hiệu hóa
+                              Inactive
                             </>
                           )}
                         </Badge>
@@ -495,12 +495,12 @@ const UserManagement = () => {
                           {user.role_name === 'admin' ? (
                             <>
                               <Shield className="h-3 w-3 mr-1" />
-                              Quản trị viên
+                              Administrator
                             </>
                           ) : (
                             <>
                               <User className="h-3 w-3 mr-1" />
-                              {user.role_name === 'user' ? 'Người dùng' : user.role_name}
+                              {user.role_name === 'user' ? 'User' : user.role_name}
                             </>
                           )}
                         </Badge>
@@ -517,8 +517,8 @@ const UserManagement = () => {
                           <SelectContent>
                             {roles.map((role) => (
                               <SelectItem key={role.id} value={role.id}>
-                                {role.name === 'admin' ? 'Quản trị viên' : 
-                                 role.name === 'user' ? 'Người dùng' : role.name}
+                                {role.name === 'admin' ? 'Administrator' : 
+                                 role.name === 'user' ? 'User' : role.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -560,19 +560,19 @@ const UserManagement = () => {
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Chỉnh sửa thông tin người dùng</DialogTitle>
+              <DialogTitle>Edit User Information</DialogTitle>
               <DialogDescription>
-                Cập nhật thông tin chi tiết của người dùng
+                Update detailed user information
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="full_name">Họ và tên</Label>
+                <Label htmlFor="full_name">Full name</Label>
                 <Input
                   id="full_name"
                   value={formData.full_name}
                   onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                  placeholder="Nhập họ và tên"
+                  placeholder="Enter full name"
                 />
               </div>
               <div className="space-y-2">
@@ -585,35 +585,35 @@ const UserManagement = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="user_code">Mã nhân viên</Label>
+                <Label htmlFor="user_code">Employee ID</Label>
                 <Input
                   id="user_code"
                   value={formData.user_code}
                   onChange={(e) => setFormData({ ...formData, user_code: e.target.value })}
-                  placeholder="Nhập mã nhân viên"
+                  placeholder="Enter employee ID"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Số điện thoại</Label>
+                <Label htmlFor="phone">Phone</Label>
                 <Input
                   id="phone"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="Nhập số điện thoại"
+                  placeholder="Enter phone number"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="address">Địa chỉ</Label>
+                <Label htmlFor="address">Address</Label>
                 <Input
                   id="address"
                   value={formData.address}
                   onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  placeholder="Nhập địa chỉ"
+                  placeholder="Enter address"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="date_of_birth">Ngày sinh</Label>
+                  <Label htmlFor="date_of_birth">Date of Birth</Label>
                   <Input
                     id="date_of_birth"
                     type="date"
@@ -622,18 +622,18 @@ const UserManagement = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="gender">Giới tính</Label>
+                  <Label htmlFor="gender">Gender</Label>
                   <Select
                     value={formData.gender}
                     onValueChange={(value) => setFormData({ ...formData, gender: value as 'male' | 'female' | 'other' | '' })}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Chọn giới tính" />
+                      <SelectValue placeholder="Select gender" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="male">Nam</SelectItem>
-                      <SelectItem value="female">Nữ</SelectItem>
-                      <SelectItem value="other">Khác</SelectItem>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -641,10 +641,10 @@ const UserManagement = () => {
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={closeDialog}>
-                Hủy
+                Cancel
               </Button>
               <Button onClick={handleSaveUser} disabled={isSaving}>
-                {isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                {isSaving ? 'Saving...' : 'Save changes'}
               </Button>
             </DialogFooter>
           </DialogContent>

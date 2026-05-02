@@ -32,7 +32,7 @@ export function useBrokerExtraction() {
       });
       if (error) {
         console.error("Broker extraction error:", error);
-        toast.error(error.message || "Không thể trích xuất hóa đơn broker");
+        toast.error(error.message || "Failed to extract broker invoice");
         return null;
       }
       if ((data as any)?.error) {
@@ -42,7 +42,7 @@ export function useBrokerExtraction() {
       return data as BrokerExtractionResult;
     } catch (e) {
       console.error(e);
-      toast.error("Lỗi khi trích xuất hóa đơn broker");
+      toast.error("Error extracting broker invoice");
       return null;
     } finally {
       setIsExtracting(false);

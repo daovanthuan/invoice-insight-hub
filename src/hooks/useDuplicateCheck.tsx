@@ -41,16 +41,16 @@ export const useDuplicateCheck = () => {
       const matchedFields: string[] = [];
 
       if (invoiceNumber && existing.invoice_number === invoiceNumber) {
-        matchedFields.push("Số hóa đơn");
+        matchedFields.push("Invoice number");
       }
       if (invoiceSerial && existing.invoice_serial === invoiceSerial) {
-        matchedFields.push("Ký hiệu");
+        matchedFields.push("Serial");
       }
       if (vendorName && existing.vendor_name === vendorName) {
-        matchedFields.push("Nhà cung cấp");
+        matchedFields.push("Vendor");
       }
       if (invoiceDate && existing.invoice_date === invoiceDate) {
-        matchedFields.push("Ngày hóa đơn");
+        matchedFields.push("Invoice date");
       }
 
       return {

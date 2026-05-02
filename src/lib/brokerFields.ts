@@ -1,30 +1,30 @@
 import { BrokerInvoice } from "@/types/database";
 
 export const BROKER_FIELD_LABELS: Record<string, string> = {
-  client_name: "Khách hàng",
-  account_no: "Số tài khoản",
-  description: "Mô tả",
-  securities_id: "Mã chứng khoán",
-  security_name: "Tên chứng khoán",
-  transaction_type: "Loại GD",
-  trade_date: "Ngày GD",
-  settlement_date: "Ngày thanh toán",
-  ex_date: "Ngày chốt quyền",
-  payment_date: "Ngày trả",
-  currency: "Tiền tệ",
-  units: "Số lượng",
-  gross_amount: "Tổng (gross)",
-  net_amount: "Net amount",
-  dividend_rate: "Tỷ lệ cổ tức",
+  client_name: "Client",
+  account_no: "Account No.",
+  description: "Description",
+  securities_id: "Securities ID",
+  security_name: "Security Name",
+  transaction_type: "Transaction Type",
+  trade_date: "Trade Date",
+  settlement_date: "Settlement Date",
+  ex_date: "Ex Date",
+  payment_date: "Payment Date",
+  currency: "Currency",
+  units: "Units",
+  gross_amount: "Gross Amount",
+  net_amount: "Net Amount",
+  dividend_rate: "Dividend Rate",
   wht_rate: "WHT (%)",
-  wht_amount: "Số tiền WHT",
-  currency_buy: "Tiền tệ mua",
-  currency_sell: "Tiền tệ bán",
-  amount_buy: "Số tiền mua",
-  amount_sell: "Số tiền bán",
-  rate: "Tỷ giá",
-  account_no_buy: "TK mua",
-  account_no_sell: "TK bán",
+  wht_amount: "WHT Amount",
+  currency_buy: "Buy Currency",
+  currency_sell: "Sell Currency",
+  amount_buy: "Buy Amount",
+  amount_sell: "Sell Amount",
+  rate: "Rate",
+  account_no_buy: "Buy Account",
+  account_no_sell: "Sell Account",
 };
 
 export const BROKER_TX_TYPES = ["CREDIT_ADVICE", "DIVIDEND", "FX_FT"] as const;
@@ -45,10 +45,10 @@ export const BROKER_DATE_FIELDS = new Set([
 ]);
 
 export const BROKER_STATUS_LABELS: Record<string, string> = {
-  pending: "Đang chờ",
-  completed: "Hoàn tất",
-  rejected: "Từ chối",
-  cancelled: "Đã hủy",
+  pending: "Pending",
+  completed: "Completed",
+  rejected: "Rejected",
+  cancelled: "Cancelled",
 };
 
 export const BROKER_STATUS_STYLES: Record<string, string> = {
@@ -74,7 +74,7 @@ export function formatBrokerValue(key: string, value: unknown): string {
     return BROKER_TX_TYPE_LABELS[String(value)] || String(value);
   }
   if (BROKER_NUMERIC_FIELDS.has(key) && typeof value === "number") {
-    return value.toLocaleString("vi-VN", { maximumFractionDigits: 4 });
+    return value.toLocaleString("en-US", { maximumFractionDigits: 4 });
   }
   return String(value);
 }

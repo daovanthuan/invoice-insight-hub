@@ -74,10 +74,10 @@ export const useNotifications = () => {
         prev.map((n) => ({ ...n, is_read: true }))
       );
       setUnreadCount(0);
-      toast.success("Đã đánh dấu tất cả đã đọc");
+      toast.success("All marked as read");
     } catch (error) {
       console.error("Error marking all as read:", error);
-      toast.error("Không thể đánh dấu đã đọc");
+      toast.error("Failed to mark as read");
     }
   };
 
@@ -97,7 +97,7 @@ export const useNotifications = () => {
       setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
     } catch (error) {
       console.error("Error deleting notification:", error);
-      toast.error("Không thể xóa thông báo");
+      toast.error("Failed to delete notification");
     }
   };
 
@@ -114,10 +114,10 @@ export const useNotifications = () => {
 
       setNotifications([]);
       setUnreadCount(0);
-      toast.success("Đã xóa tất cả thông báo");
+      toast.success("All notifications cleared");
     } catch (error) {
       console.error("Error clearing notifications:", error);
-      toast.error("Không thể xóa thông báo");
+      toast.error("Failed to clear notifications");
     }
   };
 

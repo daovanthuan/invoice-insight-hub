@@ -61,7 +61,7 @@ const extractInvoiceAsync = async (file: File): Promise<ExtractedData | null> =>
     const isPdf = file.type === "application/pdf";
 
     if (!isPdf && !validImageTypes.includes(file.type)) {
-      toast.error("Chỉ hỗ trợ file ảnh (PNG, JPG, WEBP) hoặc PDF");
+      toast.error("Only image files (PNG, JPG, WEBP) or PDF are supported");
       return null;
     }
 
@@ -79,16 +79,16 @@ const extractInvoiceAsync = async (file: File): Promise<ExtractedData | null> =>
 
     if (error) {
       console.error("Extraction error:", error);
-      toast.error("Lỗi khi trích xuất hóa đơn");
+      toast.error("Error extracting invoice");
       return null;
     }
 
     if (!data?.success) {
-      toast.error(data?.error || "Không thể trích xuất dữ liệu từ hóa đơn");
+      toast.error(data?.error || "Failed to extract invoice data");
       return null;
     }
 
-    toast.success("Trích xuất hóa đơn thành công!");
+    toast.success("Invoice extracted successfully!");
 
     // Attach confidence_score to the returned data
     const result = data.data as ExtractedData;
@@ -96,7 +96,7 @@ const extractInvoiceAsync = async (file: File): Promise<ExtractedData | null> =>
     return result;
   } catch (error) {
     console.error("Extraction error:", error);
-    toast.error("Đã xảy ra lỗi khi trích xuất hóa đơn");
+    toast.error("An error occurred while extracting the invoice");
     return null;
   }
 };
