@@ -124,12 +124,12 @@ export default function SettingsPage() {
 
   const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
-      toast.error('Mật khẩu mới không khớp');
+      toast.error('Passwords do not match');
       return;
     }
 
     if (newPassword.length < 6) {
-      toast.error('Mật khẩu phải có ít nhất 6 ký tự');
+      toast.error('Password must be at least 6 characters');
       return;
     }
 
@@ -141,12 +141,12 @@ export default function SettingsPage() {
 
       if (error) throw error;
 
-      toast.success('Đã đổi mật khẩu thành công');
+      toast.success('Password changed successfully');
       setNewPassword('');
       setConfirmPassword('');
     } catch (error: any) {
       console.error('Error changing password:', error);
-      toast.error(error.message || 'Không thể đổi mật khẩu');
+      toast.error(error.message || 'Failed to change password');
     } finally {
       setChangingPassword(false);
     }
@@ -158,14 +158,14 @@ export default function SettingsPage() {
       navigate('/auth');
     } catch (error) {
       console.error('Error signing out:', error);
-      toast.error('Không thể đăng xuất');
+      toast.error('Failed to sign out');
     }
   };
 
   if (loading) {
     return (
       <MainLayout>
-        <Header title="Cài đặt" subtitle="Tùy chỉnh cài đặt ứng dụng" />
+        <Header title="Settings" subtitle="Customize application settings" />
         <div className="p-6 max-w-4xl space-y-8">
           {[1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-48" />
@@ -177,7 +177,7 @@ export default function SettingsPage() {
 
   return (
     <MainLayout>
-      <Header title="Cài đặt" subtitle="Tùy chỉnh cài đặt ứng dụng" />
+      <Header title="Settings" subtitle="Customize application settings" />
 
       <div className="p-6 max-w-4xl">
         <div className="space-y-8">
@@ -192,8 +192,8 @@ export default function SettingsPage() {
                 <User className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-foreground">Hồ sơ cá nhân</h3>
-                <p className="text-sm text-muted-foreground">Thông tin hiển thị của bạn</p>
+                <h3 className="text-lg font-semibold text-foreground">Profile</h3>
+                <p className="text-sm text-muted-foreground">Your displayed information</p>
               </div>
             </div>
 
@@ -208,14 +208,14 @@ export default function SettingsPage() {
                 </Avatar>
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    Avatar được lấy từ email của bạn
+                    Avatar is derived from your email
                   </p>
                 </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="fullName">Họ và tên</Label>
+                  <Label htmlFor="fullName">Full name</Label>
                   <Input
                     id="fullName"
                     value={fullName}
@@ -224,7 +224,7 @@ export default function SettingsPage() {
                       setHasProfileChanges(true);
                     }}
                     className="bg-muted/50"
-                    placeholder="Nhập họ và tên"
+                    placeholder="Enter full name"
                   />
                 </div>
                 <div className="space-y-2">
@@ -241,7 +241,7 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="phone" className="flex items-center gap-2">
                     <Phone className="h-3 w-3" />
-                    Số điện thoại
+                    Phone
                   </Label>
                   <Input
                     id="phone"
@@ -251,13 +251,13 @@ export default function SettingsPage() {
                       setHasProfileChanges(true);
                     }}
                     className="bg-muted/50"
-                    placeholder="Nhập số điện thoại"
+                    placeholder="Enter phone number"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="address" className="flex items-center gap-2">
                     <MapPin className="h-3 w-3" />
-                    Địa chỉ
+                    Address
                   </Label>
                   <Input
                     id="address"
@@ -267,7 +267,7 @@ export default function SettingsPage() {
                       setHasProfileChanges(true);
                     }}
                     className="bg-muted/50"
-                    placeholder="Nhập địa chỉ"
+                    placeholder="Enter address"
                   />
                 </div>
               </div>
@@ -283,7 +283,7 @@ export default function SettingsPage() {
                   ) : (
                     <Save className="h-4 w-4" />
                   )}
-                  Lưu hồ sơ
+                  Save profile
                 </Button>
               )}
             </div>
@@ -301,19 +301,19 @@ export default function SettingsPage() {
                 <Lock className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-foreground">Bảo mật</h3>
-                <p className="text-sm text-muted-foreground">Mật khẩu và đăng xuất</p>
+                <h3 className="text-lg font-semibold text-foreground">Security</h3>
+                <p className="text-sm text-muted-foreground">Password and sign out</p>
               </div>
             </div>
 
             <div className="space-y-4">
               {/* Change Password */}
               <div className="space-y-4">
-                <Label className="text-base font-medium">Đổi mật khẩu</Label>
+                <Label className="text-base font-medium">Change password</Label>
                 
                 <div className="grid gap-4 md:grid-cols-3">
                   <div className="space-y-2">
-                    <Label htmlFor="newPassword">Mật khẩu mới</Label>
+                    <Label htmlFor="newPassword">New password</Label>
                     <Input
                       id="newPassword"
                       type="password"
@@ -324,7 +324,7 @@ export default function SettingsPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Xác nhận mật khẩu</Label>
+                    <Label htmlFor="confirmPassword">Confirm password</Label>
                     <Input
                       id="confirmPassword"
                       type="password"
@@ -344,7 +344,7 @@ export default function SettingsPage() {
                       {changingPassword ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        'Đổi mật khẩu'
+                        'Change password'
                       )}
                     </Button>
                   </div>
@@ -358,20 +358,20 @@ export default function SettingsPage() {
                 <AlertDialogTrigger asChild>
                   <Button variant="destructive" className="gap-2">
                     <LogOut className="h-4 w-4" />
-                    Đăng xuất
+                    Sign out
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                   <AlertDialogHeader>
-                    <AlertDialogTitle>Xác nhận đăng xuất</AlertDialogTitle>
+                    <AlertDialogTitle>Confirm sign out</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?
+                      Are you sure you want to sign out?
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
-                    <AlertDialogCancel>Hủy</AlertDialogCancel>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction onClick={handleLogout}>
-                      Đăng xuất
+                      Sign out
                     </AlertDialogAction>
                   </AlertDialogFooter>
                 </AlertDialogContent>
@@ -391,17 +391,17 @@ export default function SettingsPage() {
                 <Bell className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-foreground">Thông báo</h3>
-                <p className="text-sm text-muted-foreground">Cấu hình nhận thông báo</p>
+                <h3 className="text-lg font-semibold text-foreground">Notifications</h3>
+                <p className="text-sm text-muted-foreground">Configure notification preferences</p>
               </div>
             </div>
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-foreground">Thông báo email</p>
+                  <p className="font-medium text-foreground">Email notifications</p>
                   <p className="text-sm text-muted-foreground">
-                    Nhận email khi hoàn thành trích xuất
+                    Get an email when extraction completes
                   </p>
                 </div>
                 <Switch
@@ -415,9 +415,9 @@ export default function SettingsPage() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-foreground">Cảnh báo lỗi</p>
+                  <p className="font-medium text-foreground">Error alerts</p>
                   <p className="text-sm text-muted-foreground">
-                    Nhận thông báo khi có lỗi xảy ra
+                    Get notified when errors occur
                   </p>
                 </div>
                 <Switch
@@ -431,9 +431,9 @@ export default function SettingsPage() {
 
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-foreground">Báo cáo hàng tuần</p>
+                  <p className="font-medium text-foreground">Weekly reports</p>
                   <p className="text-sm text-muted-foreground">
-                    Nhận tổng hợp hóa đơn đã xử lý hàng tuần
+                    Get a weekly summary of processed invoices
                   </p>
                 </div>
                 <Switch
@@ -459,14 +459,14 @@ export default function SettingsPage() {
                 <Globe className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-foreground">Khu vực</h3>
-                <p className="text-sm text-muted-foreground">Cài đặt ngày tháng và tiền tệ</p>
+                <h3 className="text-lg font-semibold text-foreground">Region</h3>
+                <p className="text-sm text-muted-foreground">Date and currency settings</p>
               </div>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Định dạng ngày</Label>
+                <Label>Date format</Label>
                 <Select
                   value={dateFormat}
                   onValueChange={(value) => {
@@ -485,7 +485,7 @@ export default function SettingsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Tiền tệ mặc định</Label>
+                <Label>Default currency</Label>
                 <Select
                   value={defaultCurrency}
                   onValueChange={(value) => {
@@ -519,8 +519,8 @@ export default function SettingsPage() {
                 <Sun className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-foreground">Giao diện</h3>
-                <p className="text-sm text-muted-foreground">Tùy chỉnh màu nền ứng dụng</p>
+                <h3 className="text-lg font-semibold text-foreground">Appearance</h3>
+                <p className="text-sm text-muted-foreground">Customize application theme</p>
               </div>
             </div>
 
@@ -536,7 +536,7 @@ export default function SettingsPage() {
                 <div className="p-3 rounded-full bg-amber-100">
                   <Sun className="h-6 w-6 text-amber-600" />
                 </div>
-                <span className="text-sm font-medium">Sáng</span>
+                <span className="text-sm font-medium">Light</span>
               </button>
               
               <button
@@ -550,7 +550,7 @@ export default function SettingsPage() {
                 <div className="p-3 rounded-full bg-slate-800">
                   <Moon className="h-6 w-6 text-slate-200" />
                 </div>
-                <span className="text-sm font-medium">Tối</span>
+                <span className="text-sm font-medium">Dark</span>
               </button>
             </div>
           </motion.div>
@@ -568,7 +568,7 @@ export default function SettingsPage() {
                 ) : (
                   <Save className="h-4 w-4" />
                 )}
-                Lưu thay đổi
+                Save changes
               </Button>
             </motion.div>
           )}
