@@ -185,7 +185,7 @@ serve(async (req) => {
             "Content-Type": "application/json",
             ...(BROKER_AI_API_KEY ? { Authorization: `Bearer ${BROKER_AI_API_KEY}` } : {}),
           },
-          body: JSON.stringify({ image_base64: fileBase64, mime_type: mimeType, file_name: fileName }),
+          body: JSON.stringify({ fileBase64, mimeType, fileName }),
           signal: AbortSignal.timeout(120_000),
         });
 
