@@ -290,6 +290,8 @@ async function extractWithGemini(imageBase64: string, mimeType: string): Promise
       ];
 
   // Step 1: Validate
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
   console.log("Gemini Step 1: Validating, isPdf:", isPdf, "mimeType:", mimeType);
   const validationResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
