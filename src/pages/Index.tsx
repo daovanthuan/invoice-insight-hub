@@ -51,8 +51,8 @@ const Index = () => {
       averageByCurrency[currency] = totalsByCurrency[currency] / (invoicesByCurrency[currency] || 1);
     });
 
-    // Group by month for chart
-    const monthlyData = invoices.reduce((acc: any[], inv) => {
+    // Group by month for chart (chỉ hóa đơn hợp lệ)
+    const monthlyData = validInvoices.reduce((acc: any[], inv) => {
       const date = inv.invoice_date || inv.created_at;
       let month = 'Unknown';
       if (date) {
@@ -78,19 +78,23 @@ const Index = () => {
       return acc;
     }, []);
 
-    // Group by vendor for chart
-    const vendorData = invoices.reduce((acc: any[], inv) => {
-      const vendor = inv.vendor_name || 'Unknown';
-      const existing = acc.find((item) => item.vendor === vendor);
-      const amount = inv.total_amount || 0;
-      
-      if (existing) {
-        existing.amount += amount;
-      } else {
-        acc.push({ vendor, amount });
-      }
-      return acc;
-    }, []);
+    // Group by vendor for chart (chỉ hóa đơn hợp lệ)
+    const vendorData = validInvoices.reduce(
+      (acc: { name: string; count: number; amount: number; currency: string }[], inv) => {
+        const name = inv.vendor_name || 'Unknown';
+        const currency = normalizeCurrency(inv.currency);
+        const existing = acc.find((item) => item.name === name && item.currency === currency);
+        const amount = inv.total_amount || 0;
+        if (existing) {
+          existing.amount += amount;
+          existing.count += 1;
+        } else {
+          acc.push({ name, count: 1, amount, currency });
+        }
+        return acc;
+      },
+      []
+    );
 
     const topVendors = vendorData
       .sort((a, b) => b.amount - a.amount)

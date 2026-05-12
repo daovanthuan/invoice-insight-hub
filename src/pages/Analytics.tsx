@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { normalizeCurrency } from '@/lib/currency';
+import { normalizeCurrency, formatCurrencyCompact } from '@/lib/currency';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Header } from '@/components/layout/Header';
 import { useInvoices } from '@/hooks/useInvoices';
@@ -27,17 +27,22 @@ import {
   Line,
 } from 'recharts';
 
-// Helper function to format currency
-const formatCurrency = (amount: number): string => {
-  if (amount >= 1_000_000_000) {
-    return `${(amount / 1_000_000_000).toFixed(1)}B`;
-  } else if (amount >= 1_000_000) {
-    return `${(amount / 1_000_000).toFixed(1)}M`;
-  } else if (amount >= 1_000) {
-    return `${(amount / 1_000).toFixed(1)}K`;
-  }
-  return amount.toLocaleString('en-US', { maximumFractionDigits: 0 });
+// Format multi-currency totals (compact, max 3 shown)
+const formatMultiCurrency = (totals: Record<string, number>): string => {
+  const entries = Object.entries(totals)
+    .filter(([_, v]) => v > 0)
+    .sort(([, a], [, b]) => b - a);
+  if (entries.length === 0) return '0';
+  const display = entries.slice(0, 3)
+    .map(([c, v]) => formatCurrencyCompact(v, c))
+    .join(' | ');
+  const remaining = entries.length - 3;
+  return remaining > 0 ? `${display} (+${remaining})` : display;
 };
+
+// Sum multi-currency totals into one comparable value (for trend %)
+const sumTotals = (totals: Record<string, number>): number =>
+  Object.values(totals).reduce((a, b) => a + b, 0);
 
 export default function AnalyticsPage() {
   const { invoices, loading } = useInvoices();
@@ -51,14 +56,19 @@ export default function AnalyticsPage() {
     const startOfLastWeek = new Date(startOfWeek);
     startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
 
-    // This week invoices
-    const thisWeekInvoices = invoices.filter((inv) => {
+    // Loại trừ hóa đơn cancelled/rejected khỏi mọi chỉ số doanh thu/vendor
+    const validInvoices = invoices.filter(
+      (inv) => inv.status !== 'cancelled' && inv.status !== 'rejected'
+    );
+
+    // This week invoices (hợp lệ)
+    const thisWeekInvoices = validInvoices.filter((inv) => {
       const date = new Date(inv.created_at);
       return date >= startOfWeek;
     });
 
-    // Last week invoices
-    const lastWeekInvoices = invoices.filter((inv) => {
+    // Last week invoices (hợp lệ)
+    const lastWeekInvoices = validInvoices.filter((inv) => {
       const date = new Date(inv.created_at);
       return date >= startOfLastWeek && date < startOfWeek;
     });
@@ -69,15 +79,23 @@ export default function AnalyticsPage() {
       ? Math.round(((thisWeekCount - lastWeekCount) / lastWeekCount) * 100) 
       : thisWeekCount > 0 ? 100 : 0;
 
-    // Weekly revenue
-    const thisWeekRevenue = thisWeekInvoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
-    const lastWeekRevenue = lastWeekInvoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
-    const revenueChange = lastWeekRevenue > 0 
-      ? Math.round(((thisWeekRevenue - lastWeekRevenue) / lastWeekRevenue) * 100)
-      : thisWeekRevenue > 0 ? 100 : 0;
+    // Weekly revenue – group by currency để không cộng lẫn VND/USD
+    const reduceByCurrency = (list: typeof invoices) =>
+      list.reduce((acc: Record<string, number>, inv) => {
+        const c = normalizeCurrency(inv.currency);
+        acc[c] = (acc[c] || 0) + (inv.total_amount || 0);
+        return acc;
+      }, {});
+    const thisWeekRevenueByCurrency = reduceByCurrency(thisWeekInvoices);
+    const lastWeekRevenueByCurrency = reduceByCurrency(lastWeekInvoices);
+    const thisWeekTotal = sumTotals(thisWeekRevenueByCurrency);
+    const lastWeekTotal = sumTotals(lastWeekRevenueByCurrency);
+    const revenueChange = lastWeekTotal > 0
+      ? Math.round(((thisWeekTotal - lastWeekTotal) / lastWeekTotal) * 100)
+      : thisWeekTotal > 0 ? 100 : 0;
 
-    // Active vendors (unique vendor names)
-    const activeVendors = new Set(invoices.map((inv) => inv.vendor_name).filter(Boolean)).size;
+    // Active vendors (chỉ từ hóa đơn hợp lệ)
+    const activeVendors = new Set(validInvoices.map((inv) => inv.vendor_name).filter(Boolean)).size;
 
     // Processed rate
     const processedCount = invoices.filter((inv) => inv.status === 'processed').length;
@@ -118,8 +136,8 @@ export default function AnalyticsPage() {
       }))
       .slice(-6);
 
-    // Currency distribution
-    const currencyMap = invoices.reduce((acc: Record<string, number>, inv) => {
+    // Currency distribution (chỉ hóa đơn hợp lệ)
+    const currencyMap = validInvoices.reduce((acc: Record<string, number>, inv) => {
       const currency = normalizeCurrency(inv.currency);
       acc[currency] = (acc[currency] || 0) + 1;
       return acc;
@@ -135,8 +153,8 @@ export default function AnalyticsPage() {
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
 
-    // Monthly data for chart
-    const monthlyData = invoices.reduce((acc: any[], inv) => {
+    // Monthly data for chart (chỉ hóa đơn hợp lệ)
+    const monthlyData = validInvoices.reduce((acc: any[], inv) => {
       const date = inv.invoice_date || inv.created_at;
       let month = 'Unknown';
       if (date) {
@@ -160,18 +178,23 @@ export default function AnalyticsPage() {
       return acc;
     }, []);
 
-    // Top vendors
-    const vendorData = invoices.reduce((acc: any[], inv) => {
-      const vendor = inv.vendor_name || 'Unknown';
-      const existing = acc.find((item) => item.vendor === vendor);
-      const amount = inv.total_amount || 0;
-      if (existing) {
-        existing.amount += amount;
-      } else {
-        acc.push({ vendor, amount });
-      }
-      return acc;
-    }, []);
+    // Top vendors (chỉ hóa đơn hợp lệ, group theo currency để hiển thị đúng)
+    const vendorData = validInvoices.reduce(
+      (acc: { name: string; count: number; amount: number; currency: string }[], inv) => {
+        const name = inv.vendor_name || 'Unknown';
+        const currency = normalizeCurrency(inv.currency);
+        const existing = acc.find((i) => i.name === name && i.currency === currency);
+        const amount = inv.total_amount || 0;
+        if (existing) {
+          existing.amount += amount;
+          existing.count += 1;
+        } else {
+          acc.push({ name, count: 1, amount, currency });
+        }
+        return acc;
+      },
+      []
+    );
 
     const topVendors = vendorData.sort((a, b) => b.amount - a.amount).slice(0, 5);
 
@@ -188,7 +211,7 @@ export default function AnalyticsPage() {
     return {
       thisWeekCount,
       weeklyChange,
-      thisWeekRevenue,
+      thisWeekRevenueByCurrency,
       revenueChange,
       activeVendors,
       processedRate,
@@ -237,7 +260,7 @@ export default function AnalyticsPage() {
           />
           <StatCard
             title="Weekly Revenue"
-            value={formatCurrency(stats.thisWeekRevenue)}
+            value={formatMultiCurrency(stats.thisWeekRevenueByCurrency)}
             change={`${stats.revenueChange >= 0 ? '+' : ''}${stats.revenueChange}% vs last week`}
             changeType={stats.revenueChange >= 0 ? 'positive' : 'negative'}
             icon={DollarSign}

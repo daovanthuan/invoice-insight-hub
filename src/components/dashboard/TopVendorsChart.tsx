@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { formatCurrencyCompact, formatCurrencyFull } from '@/lib/currency';
 import {
   BarChart,
   Bar,
@@ -13,6 +14,7 @@ interface VendorData {
   name: string;
   count: number;
   amount: number;
+  currency?: string;
 }
 
 interface TopVendorsChartProps {
@@ -40,7 +42,7 @@ export function TopVendorsChart({ data }: TopVendorsChartProps) {
               type="number"
               stroke="hsl(var(--muted-foreground))"
               fontSize={12}
-              tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+              tickFormatter={(value) => formatCurrencyCompact(value, '').trim()}
             />
             <YAxis
               type="category"
@@ -57,7 +59,10 @@ export function TopVendorsChart({ data }: TopVendorsChartProps) {
                 borderRadius: '8px',
                 color: 'hsl(var(--popover-foreground))',
               }}
-              formatter={(value: number) => [`$${value.toLocaleString()}`, 'Amount']}
+              formatter={(value: number, _name, item: any) => [
+                formatCurrencyFull(value, item?.payload?.currency),
+                'Amount',
+              ]}
             />
             <Bar
               dataKey="amount"
