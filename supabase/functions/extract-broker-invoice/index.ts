@@ -373,10 +373,12 @@ serve(async (req) => {
 if (BROKER_AI_API_URL) {
   try {
     const baseUrl = BROKER_AI_API_URL.replace(/\/+$/, "");
-    const submitUrl = `${baseUrl}/call/predict`;
 
-    console.log("Calling broker AI:", submitUrl);
-
+    const submitUrl =
+      `${baseUrl}/gradio_api/call/predict`;
+    
+    console.log("HF submit URL:", submitUrl);
+    
     const submitResp = await fetch(submitUrl, {
       method: "POST",
       headers: {
@@ -393,7 +395,7 @@ if (BROKER_AI_API_URL) {
           },
         ],
       }),
-      signal: AbortSignal.timeout(180_000),
+    });
     });
 
     if (!submitResp.ok) {
