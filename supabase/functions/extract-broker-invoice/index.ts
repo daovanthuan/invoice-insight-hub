@@ -370,90 +370,128 @@ serve(async (req) => {
     }
 
     // ===== Try Custom AI: Hugging Face Gradio Space first =====
-    if (BROKER_AI_API_URL) {
-      try {
-        const baseUrl = BROKER_AI_API_URL.replace(/\/+$/, "");
-        const url = `${baseUrl}/run/predict`;
+if (BROKER_AI_API_URL) {
+  try {
+    const baseUrl = BROKER_AI_API_URL.replace(/\/+$/, "");
+    const submitUrl = `${baseUrl}/call/predict`;
 
-        console.log("Calling broker AI:", url);
+    console.log("Calling broker AI:", submitUrl);
 
-        const customResp = await fetch(url, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(BROKER_AI_API_KEY
-              ? { Authorization: `Bearer ${BROKER_AI_API_KEY}` }
-              : {}),
+    const submitResp = await fetch(submitUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(BROKER_AI_API_KEY
+          ? { Authorization: `Bearer ${BROKER_AI_API_KEY}` }
+          : {}),
+      },
+      body: JSON.stringify({
+        data: [
+          {
+            name: fileName || "broker.pdf",
+            data: `data:${mimeType};base64,${fileBase64}`,
           },
-          body: JSON.stringify({
-            data: [
-              {
-                name: fileName || "broker.pdf",
-                data: `data:${mimeType};base64,${fileBase64}`,
-              },
-            ],
-          }),
-          signal: AbortSignal.timeout(180_000),
-        });
+        ],
+      }),
+      signal: AbortSignal.timeout(180_000),
+    });
 
-        if (customResp.ok) {
-          const cj = await customResp.json();
-
-          console.log("Broker AI raw response:", JSON.stringify(cj));
-
-          const dataObj = Array.isArray(cj?.data)
-            ? cj.data[0]
-            : cj?.data ?? cj;
-
-          if (dataObj && typeof dataObj === "object") {
-            const normalized = normalizeBrokerAIOutput(dataObj);
-
-            const out: Record<string, any> = {};
-
-            for (const f of FIELDS) {
-              out[f] = normalized[f] ?? "";
-            }
-
-            const extend: Record<string, any> = {};
-
-            for (const [k, v] of Object.entries(dataObj)) {
-              if (
-                !FIELDS.includes(k) &&
-                k !== "extend" &&
-                v !== "" &&
-                v !== null &&
-                v !== undefined
-              ) {
-                extend[k] = v;
-              }
-            }
-
-            const confidence_score = calcConfidence(out);
-
-            return new Response(
-              JSON.stringify({
-                data: out,
-                extend,
-                confidence_score,
-                raw: dataObj,
-                source: "custom_ai",
-              }),
-              {
-                headers: {
-                  ...corsHeaders,
-                  "Content-Type": "application/json",
-                },
-              },
-            );
-          }
-        } else {
-          const errTxt = await customResp.text();
-          console.error("Custom broker AI failed:", customResp.status, errTxt);
-        }
-      } catch (err) {
-        console.error("Custom broker AI exception, falling back to Gemini:", err);
-      }
+    if (!submitResp.ok) {
+      const errTxt = await submitResp.text();
+      console.error("Custom broker AI submit failed:", submitResp.status, errTxt);
+      throw new Error(`HF submit failed: ${submitResp.status}`);
     }
+
+    const submitJson = await submitResp.json();
+    console.log("HF submit response:", JSON.stringify(submitJson));
+
+    let cj: any = submitJson;
+
+    // Gradio /call/predict usually returns { event_id }
+    if (submitJson?.event_id) {
+      const eventUrl = `${baseUrl}/call/predict/${submitJson.event_id}`;
+
+      console.log("Polling broker AI:", eventUrl);
+
+      const eventResp = await fetch(eventUrl, {
+        method: "GET",
+        headers: {
+          ...(BROKER_AI_API_KEY
+            ? { Authorization: `Bearer ${BROKER_AI_API_KEY}` }
+            : {}),
+        },
+        signal: AbortSignal.timeout(180_000),
+      });
+
+      if (!eventResp.ok) {
+        const errTxt = await eventResp.text();
+        console.error("Custom broker AI event failed:", eventResp.status, errTxt);
+        throw new Error(`HF event failed: ${eventResp.status}`);
+      }
+
+      const eventText = await eventResp.text();
+      console.log("HF event raw:", eventText);
+
+      const dataLine = eventText
+        .split("\n")
+        .find((line) => line.startsWith("data: "));
+
+      if (!dataLine) {
+        throw new Error("HF event response has no data line");
+      }
+
+      cj = JSON.parse(dataLine.replace(/^data:\s*/, ""));
+    }
+
+    const dataObj = Array.isArray(cj?.data)
+      ? cj.data[0]
+      : cj?.data ?? cj;
+
+    if (dataObj && typeof dataObj === "object") {
+      const normalized = normalizeBrokerAIOutput(dataObj);
+
+      const out: Record<string, any> = {};
+
+      for (const f of FIELDS) {
+        out[f] = normalized[f] ?? "";
+      }
+
+      const extend: Record<string, any> = {};
+
+      for (const [k, v] of Object.entries(dataObj)) {
+        if (
+          !FIELDS.includes(k) &&
+          k !== "extend" &&
+          v !== "" &&
+          v !== null &&
+          v !== undefined
+        ) {
+          extend[k] = v;
+        }
+      }
+
+      const confidence_score = calcConfidence(out);
+
+      return new Response(
+        JSON.stringify({
+          data: out,
+          extend,
+          confidence_score,
+          raw: dataObj,
+          source: "custom_ai",
+        }),
+        {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": "application/json",
+          },
+        },
+      );
+    }
+  } catch (err) {
+    console.error("Custom broker AI exception, falling back to Gemini:", err);
+  }
+}
 
     // ===== Fallback: Gemini via Lovable AI Gateway =====
     if (!LOVABLE_API_KEY) {
