@@ -369,16 +369,59 @@ serve(async (req) => {
       );
     }
 
-    // ===== Try Custom AI: Hugging Face Gradio Space first =====
+// ===== Try Custom AI: Hugging Face Gradio Space first =====
 if (BROKER_AI_API_URL) {
   try {
     const baseUrl = BROKER_AI_API_URL.replace(/\/+$/, "");
 
-    const submitUrl =
-      `${baseUrl}/gradio_api/call/predict`;
-    
+    console.log("BROKER_AI_API_URL raw:", BROKER_AI_API_URL);
+
+    // 1) Convert base64 -> binary
+    const binary = Uint8Array.from(atob(fileBase64), (c) => c.charCodeAt(0));
+
+    const blob = new Blob([binary], {
+      type: mimeType || "application/octet-stream",
+    });
+
+    // 2) Upload file to Gradio first
+    const uploadUrl = `${baseUrl}/gradio_api/upload`;
+    console.log("HF upload URL:", uploadUrl);
+
+    const formData = new FormData();
+    formData.append("files", blob, fileName || "broker.pdf");
+
+    const uploadResp = await fetch(uploadUrl, {
+      method: "POST",
+      headers: {
+        ...(BROKER_AI_API_KEY
+          ? { Authorization: `Bearer ${BROKER_AI_API_KEY}` }
+          : {}),
+      },
+      body: formData,
+      signal: AbortSignal.timeout(180_000),
+    });
+
+    if (!uploadResp.ok) {
+      const errTxt = await uploadResp.text();
+      console.error("Custom broker AI upload failed:", uploadResp.status, errTxt);
+      throw new Error(`HF upload failed: ${uploadResp.status}`);
+    }
+
+    const uploadJson = await uploadResp.json();
+    console.log("HF upload response:", JSON.stringify(uploadJson));
+
+    const uploadedPath = Array.isArray(uploadJson)
+      ? uploadJson[0]
+      : uploadJson?.[0] ?? uploadJson?.path ?? uploadJson?.files?.[0];
+
+    if (!uploadedPath) {
+      throw new Error("HF upload response has no uploaded file path");
+    }
+
+    // 3) Call predict
+    const submitUrl = `${baseUrl}/gradio_api/call/predict`;
     console.log("HF submit URL:", submitUrl);
-    
+
     const submitResp = await fetch(submitUrl, {
       method: "POST",
       headers: {
@@ -390,12 +433,16 @@ if (BROKER_AI_API_URL) {
       body: JSON.stringify({
         data: [
           {
-            name: fileName || "broker.pdf",
-            data: `data:${mimeType};base64,${fileBase64}`,
+            path: uploadedPath,
+            orig_name: fileName || "broker.pdf",
+            mime_type: mimeType,
+            meta: {
+              _type: "gradio.FileData",
+            },
           },
         ],
       }),
-    });
+      signal: AbortSignal.timeout(180_000),
     });
 
     if (!submitResp.ok) {
@@ -409,10 +456,9 @@ if (BROKER_AI_API_URL) {
 
     let cj: any = submitJson;
 
-    // Gradio /call/predict usually returns { event_id }
+    // 4) Poll result if Gradio returns event_id
     if (submitJson?.event_id) {
-      const eventUrl = `${baseUrl}/call/predict/${submitJson.event_id}`;
-
+      const eventUrl = `${baseUrl}/gradio_api/call/predict/${submitJson.event_id}`;
       console.log("Polling broker AI:", eventUrl);
 
       const eventResp = await fetch(eventUrl, {
@@ -445,6 +491,7 @@ if (BROKER_AI_API_URL) {
       cj = JSON.parse(dataLine.replace(/^data:\s*/, ""));
     }
 
+    // 5) Normalize response
     const dataObj = Array.isArray(cj?.data)
       ? cj.data[0]
       : cj?.data ?? cj;
@@ -494,7 +541,7 @@ if (BROKER_AI_API_URL) {
     console.error("Custom broker AI exception, falling back to Gemini:", err);
   }
 }
-
+    
     // ===== Fallback: Gemini via Lovable AI Gateway =====
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
