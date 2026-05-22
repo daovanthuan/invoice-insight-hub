@@ -117,14 +117,14 @@ export function Sidebar({ onNavigate }: SidebarProps) {
             <LogOut className="h-5 w-5" />
             Sign out
           </Button>
-          <div className="rounded-lg bg-muted/50 p-4">
+          {/* <div className="rounded-lg bg-muted/50 p-4">
             <p className="text-xs font-medium text-muted-foreground">
               Powered by
             </p>
             <p className="text-sm font-semibold text-foreground">
               Gemini 2.5 Flash
             </p>
-          </div>
+          </div> */}
         </div>
       </div>
     </aside>
